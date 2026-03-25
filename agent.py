@@ -1,5 +1,6 @@
 import json
 import logging
+import math
 import subprocess
 import sys
 import time
@@ -9,6 +10,11 @@ HISTORY_DIR = Path("history")
 CONFIG_FILE = Path("config_auto_finder.py")
 OPTIMIZER_FILE = Path("optimizer.md")
 AGENT_HISTORY_FILE = Path("agent_history.jsonl")
+MAX_ITERS = 20
+MAX_CONFIG_CHANGED_LINES = 120
+NO_IMPROVEMENT_LIMIT = 3
+SCORE_MIN = 0.0
+SCORE_MAX = 1.0
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
@@ -53,6 +59,45 @@ def get_config_diff():
     return result.stdout.strip()
 
 
+def count_changed_lines(diff_text):
+    changed = 0
+    for line in diff_text.splitlines():
+        if (line.startswith("+") or line.startswith("-")) and not (
+            line.startswith("+++") or line.startswith("---")
+        ):
+            changed += 1
+    return changed
+
+
+def restore_config_file():
+    restore_result = subprocess.run(
+        ["git", "restore", "--source=HEAD", "--", str(CONFIG_FILE)],
+        text=True,
+        capture_output=True,
+    )
+    if restore_result.returncode != 0:
+        raise RuntimeError(
+            restore_result.stderr.strip() or restore_result.stdout.strip() or "git restore failed"
+        )
+
+
+def parse_overall_score(results):
+    if "overall_score" not in results:
+        raise ValueError("missing overall_score")
+    raw = results.get("overall_score")
+    if raw is None:
+        raise ValueError("overall_score is null")
+    try:
+        score = float(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"overall_score is not numeric: {raw!r}") from exc
+    if not math.isfinite(score):
+        raise ValueError(f"overall_score is not finite: {raw!r}")
+    if score < SCORE_MIN - 1e-6 or score > SCORE_MAX + 1e-6:
+        raise ValueError(f"overall_score out of range: {score}")
+    return score
+
+
 def git_commit(iteration):
     add_result = subprocess.run(["git", "add", "."], text=True, capture_output=True)
     if add_result.returncode != 0:
@@ -79,8 +124,8 @@ def append_history(record):
 
 def main():
     optimizer_text = OPTIMIZER_FILE.read_text(encoding="utf-8")
-    MAX_ITERS = 20
     loop = 1
+    no_improvement_streak = 0
     while loop <= MAX_ITERS:
         ts = int(time.time())
         status = "skipped"
@@ -91,13 +136,18 @@ def main():
         after_iter = None
         try:
             before_iter, before_results, debug = run_evaluation()
-            prev_score = float(before_results.get("overall_score", 0.0))
+            prev_score = parse_overall_score(before_results)
             failures = debug.get("failures", [])
             current_weights = debug.get("current_weights", {})
             llm_prompt = (
                 "You are improving config_auto_finder.py.\n"
                 "Edit ONLY config_auto_finder.py directly in the workspace.\n"
-                "Make a small safe improvement (1-2 focused changes).\n"
+                "Inspect failed cases and compare predicted vs ground-truth candidate scores/components.\n"
+                "Focus on 1-2 failed cases only.\n"
+                "Identify the smallest edit likely to flip at least one failed ranking.\n"
+                "Avoid edits that only smooth weights without likely ranking impact.\n"
+                "Make only 1-2 focused code changes.\n"
+                "In summary, state exactly what changed and which failure(s) it targets.\n"
                 "Then output strict JSON only in this format:\n"
                 '{"changed": true|false, "summary": "what changed and why"}\n'
                 "If no useful change, set changed=false and explain why in summary.\n"
@@ -117,22 +167,44 @@ def main():
             if not changed:
                 status = "skipped"
             else:
-                logging.info(f"config_diff:\n{diff_text}")
-                git_commit(loop)
-                try:
-                    after_iter, after_results, _ = run_evaluation()
-                except Exception:
-                    git_revert_last_commit()
-                    raise
-                curr_score = float(after_results.get("overall_score", 0.0))
-                improvement = round(curr_score - prev_score, 6)
-                if curr_score > prev_score + 1e-6:
-                    status = "kept"
+                changed_lines = count_changed_lines(diff_text)
+                if changed_lines > MAX_CONFIG_CHANGED_LINES:
+                    restore_config_file()
+                    status = "skipped_large_diff"
+                    logging.info(
+                        "skipping change: changed_lines=%d limit=%d",
+                        changed_lines,
+                        MAX_CONFIG_CHANGED_LINES,
+                    )
+                    diff_text = ""
+                    changed = False
                 else:
-                    git_revert_last_commit()
-                    status = "reverted"
+                    logging.info(f"config_diff:\n{diff_text}")
+                    git_commit(loop)
+                    try:
+                        after_iter, after_results, _ = run_evaluation()
+                    except Exception:
+                        git_revert_last_commit()
+                        raise
+                    try:
+                        curr_score = parse_overall_score(after_results)
+                    except ValueError as exc:
+                        git_revert_last_commit()
+                        status = "reverted_invalid_eval"
+                        logging.info(f"invalid evaluation result: {exc}")
+                    else:
+                        improvement = round(curr_score - prev_score, 6)
+                        if curr_score > prev_score + 1e-6:
+                            status = "kept"
+                        else:
+                            git_revert_last_commit()
+                            status = "reverted"
         except Exception:
-            status = status if status in {"kept", "reverted"} else "skipped"
+            status = (
+                status
+                if status in {"kept", "reverted", "reverted_invalid_eval", "skipped_large_diff"}
+                else "skipped"
+            )
         delta_str = f"{improvement:+.6f}" if improvement is not None else "N/A"
         score_str = f"{curr_score} ({delta_str})" if curr_score is not None else "N/A"
         logging.info(f"Iteration {loop}\nScore: {score_str}\nStatus: {status}")
@@ -148,6 +220,16 @@ def main():
                 "improvement": improvement,
             }
         )
+        if status == "kept":
+            no_improvement_streak = 0
+        else:
+            no_improvement_streak += 1
+            if no_improvement_streak >= NO_IMPROVEMENT_LIMIT:
+                logging.info(
+                    "Stopping early due to stagnation: no overall_score improvement for %d consecutive iterations.",
+                    NO_IMPROVEMENT_LIMIT,
+                )
+                break
         loop += 1
 
 
