@@ -90,6 +90,135 @@ def score_prediction(pred: dict[str, Any], gt: dict[str, Any]) -> tuple[dict[str
     )
 
 
+def clamp(value: float, lo: float = 0.0, hi: float = 1.0) -> float:
+    return max(lo, min(hi, value))
+
+
+def _score_additive(features: dict[str, float], weights: dict[str, float]) -> dict[str, Any]:
+    components = {
+        key: round(float(features.get(key, 0.0)) * float(weight), 6) for key, weight in weights.items()
+    }
+    return {
+        "score": round(clamp(sum(components.values())), 6),
+        "components": components,
+    }
+
+
+def _score_header_row_fallback(
+    row_index: int,
+    rows: list[dict[str, Any]],
+    weights: dict[str, float],
+) -> dict[str, Any] | None:
+    indexed_rows = {int(row.get("row_index", 0)): row for row in rows}
+    row = indexed_rows.get(int(row_index))
+    if row is None:
+        return None
+    sorted_rows = sorted(rows, key=lambda item: int(item.get("row_index", 0)))
+    target_pos = next((idx for idx, item in enumerate(sorted_rows) if int(item.get("row_index", 0)) == row_index), -1)
+    if target_pos < 0:
+        return None
+    next_rows = sorted_rows[target_pos + 1 : target_pos + 3]
+    next_avg_non_empty = sum(int(item.get("non_empty_count", 0)) for item in next_rows) / max(1, len(next_rows))
+    scanned_rows = max(1, len(sorted_rows))
+    non_empty_count = int(row.get("non_empty_count", 0))
+    style_ratio = clamp(float(row.get("styled_count", 0)) / max(1.0, float(non_empty_count)))
+    features = {
+        "non_empty_norm": clamp(non_empty_count / 10.0),
+        "string_ratio": float(row.get("string_ratio", 0.0)),
+        "short_text_ratio": float(row.get("short_text_ratio", 0.0)),
+        "unique_value_ratio": float(row.get("unique_value_ratio", 0.0)),
+        "style_ratio": style_ratio,
+        "followed_by_tabular": clamp(next_avg_non_empty / max(3.0, float(non_empty_count))),
+        "early_row_bias": clamp(1.0 - ((row_index - 1) / max(1.0, scanned_rows - 1.0))),
+        "has_id_like_token": float(bool(row.get("has_id_like_token", False))),
+        "has_name_like_token": float(bool(row.get("has_name_like_token", False))),
+        "has_date_like_token": float(bool(row.get("has_date_like_token", False))),
+        "has_code_like_token": float(bool(row.get("has_code_like_token", False))),
+        "numeric_ratio": float(row.get("numeric_ratio", 0.0)),
+        "long_text_ratio": float(row.get("long_text_ratio", 0.0)),
+        "sparse_penalty": clamp((2.0 - non_empty_count) / 2.0),
+    }
+    score_info = _score_additive(features, weights)
+    return {"row": int(row_index), "score": score_info["score"], "components": score_info["components"]}
+
+
+def _score_data_row_fallback(
+    row_index: int,
+    rows: list[dict[str, Any]],
+    header_row: int,
+    weights: dict[str, float],
+    sheet_features: dict[str, Any],
+) -> dict[str, Any] | None:
+    if int(row_index) <= int(header_row):
+        return None
+    indexed_rows = {int(row.get("row_index", 0)): row for row in rows}
+    row = indexed_rows.get(int(row_index))
+    if row is None:
+        return None
+    candidates = [item for item in rows if int(item.get("row_index", 0)) > int(header_row)]
+    if not candidates:
+        return None
+    header_features = indexed_rows.get(int(header_row))
+    header_columns = set(header_features.get("non_empty_columns", []) if header_features else [])
+    if not header_columns:
+        header_columns = set(sheet_features.get("active_columns", []))
+    header_col_count = max(1, len(header_columns))
+    first_non_empty_after_header = next(
+        (int(item.get("row_index", 0)) for item in candidates if int(item.get("non_empty_count", 0)) >= 2),
+        int(candidates[0].get("row_index", 0)),
+    )
+    sorted_candidates = sorted(candidates, key=lambda item: int(item.get("row_index", 0)))
+    span = max(
+        1,
+        int(sorted_candidates[-1].get("row_index", 0)) - (int(header_row) + 1) + 1,
+    )
+    non_empty_count = int(row.get("non_empty_count", 0))
+    row_columns = set(row.get("non_empty_columns", []))
+    overlap_with_header = len(row_columns & header_columns) / header_col_count
+    distance = int(row_index) - int(header_row)
+    prev_non_empty = int(indexed_rows.get(int(row_index) - 1, {}).get("non_empty_count", 0))
+    style_ratio = clamp(float(row.get("styled_count", 0)) / max(1.0, float(non_empty_count)))
+    features = {
+        "overlap_with_header": clamp(overlap_with_header),
+        "numeric_ratio": float(row.get("numeric_ratio", 0.0)),
+        "value_mix": clamp(
+            1.0 - float(row.get("short_text_ratio", 0.0)) * float(row.get("string_ratio", 0.0))
+        ),
+        "early_after_header": clamp(1.0 - ((distance - 1) / span)),
+        "offset_preference": clamp(1.0 - abs(distance - 2.5) / 3.5),
+        "unstyled_ratio": clamp(1.0 - style_ratio),
+        "unique_value_ratio": float(row.get("unique_value_ratio", 0.0)),
+        "first_non_empty_after_header": float(int(row_index) == first_non_empty_after_header),
+        "sparse_input": float(non_empty_count == 1),
+        "transition_from_dense": float(prev_non_empty >= 3 and non_empty_count <= 1),
+        "header_like_text": clamp(float(row.get("string_ratio", 0.0)) * float(row.get("short_text_ratio", 0.0))),
+        "long_note_penalty": clamp(float(row.get("long_text_ratio", 0.0)) * float(row.get("string_ratio", 0.0))),
+        "dense_row_penalty": clamp((non_empty_count - 8.0) / 8.0),
+    }
+    score_info = _score_additive(features, weights)
+    return {"row": int(row_index), "score": score_info["score"], "components": score_info["components"]}
+
+
+def _pick_candidate(
+    candidate_by_row: dict[int, dict[str, Any]],
+    row: int,
+    fallback_builder: Any,
+) -> dict[str, Any]:
+    candidate = candidate_by_row.get(int(row))
+    if candidate is not None:
+        return candidate
+    fallback = fallback_builder(int(row))
+    if fallback is not None:
+        return fallback
+    return {"row": int(row), "score": None, "components": {}}
+
+
+def _score_gap(predicted_score: Any, ground_truth_score: Any) -> float | None:
+    if predicted_score is None or ground_truth_score is None:
+        return None
+    return round(float(predicted_score) - float(ground_truth_score), 6)
+
+
 def evaluate(ground_truth_json: str | Path, excel_dir: str | Path) -> tuple[dict[str, Any], dict[str, Any]]:
     excel_dir = Path(excel_dir)
     samples = load_ground_truth(ground_truth_json)
@@ -172,29 +301,53 @@ def evaluate(ground_truth_json: str | Path, excel_dir: str | Path) -> tuple[dict
             predicted_data_row = int(pred.get("data_row", 0))
             correct_data_row = int(gt["data_row"])
 
-            header_predicted_row = header_candidate_by_row.get(
-                predicted_header_row,
-                {"row": predicted_header_row, "score": 0.0, "components": {}},
+            header_predicted_row = _pick_candidate(
+                candidate_by_row=header_candidate_by_row,
+                row=predicted_header_row,
+                fallback_builder=lambda row: _score_header_row_fallback(
+                    row_index=row,
+                    rows=row_features,
+                    weights=WEIGHTS["header"],
+                ),
             )
-            header_correct_row = header_candidate_by_row.get(
-                correct_header_row,
-                {"row": correct_header_row, "score": 0.0, "components": {}},
+            header_correct_row = _pick_candidate(
+                candidate_by_row=header_candidate_by_row,
+                row=correct_header_row,
+                fallback_builder=lambda row: _score_header_row_fallback(
+                    row_index=row,
+                    rows=row_features,
+                    weights=WEIGHTS["header"],
+                ),
             )
-            data_predicted_row = data_candidate_by_row.get(
-                predicted_data_row,
-                {"row": predicted_data_row, "score": 0.0, "components": {}},
+            data_predicted_row = _pick_candidate(
+                candidate_by_row=data_candidate_by_row,
+                row=predicted_data_row,
+                fallback_builder=lambda row: _score_data_row_fallback(
+                    row_index=row,
+                    rows=row_features,
+                    header_row=predicted_header_row,
+                    weights=WEIGHTS["data"],
+                    sheet_features=sheet,
+                ),
             )
-            data_correct_row = data_candidate_by_row.get(
-                correct_data_row,
-                {"row": correct_data_row, "score": 0.0, "components": {}},
+            data_correct_row = _pick_candidate(
+                candidate_by_row=data_candidate_by_row,
+                row=correct_data_row,
+                fallback_builder=lambda row: _score_data_row_fallback(
+                    row_index=row,
+                    rows=row_features,
+                    header_row=predicted_header_row,
+                    weights=WEIGHTS["data"],
+                    sheet_features=sheet,
+                ),
             )
 
-            predicted_header_score = float(header_predicted_row.get("score", 0.0))
-            correct_header_score = float(header_correct_row.get("score", 0.0))
-            header_score_gap = round(predicted_header_score - correct_header_score, 6)
-            predicted_data_score = float(data_predicted_row.get("score", 0.0))
-            correct_data_score = float(data_correct_row.get("score", 0.0))
-            data_score_gap = round(predicted_data_score - correct_data_score, 6)
+            predicted_header_score = header_predicted_row.get("score")
+            correct_header_score = header_correct_row.get("score")
+            header_score_gap = _score_gap(predicted_header_score, correct_header_score)
+            predicted_data_score = data_predicted_row.get("score")
+            correct_data_score = data_correct_row.get("score")
+            data_score_gap = _score_gap(predicted_data_score, correct_data_score)
 
             scanned_rows = int(sheet.get("scanned_rows", len(row_features)))
             max_row = int(
@@ -221,6 +374,17 @@ def evaluate(ground_truth_json: str | Path, excel_dir: str | Path) -> tuple[dict
                     "header_correct_row": header_correct_row,
                     "data_predicted_row": data_predicted_row,
                     "data_correct_row": data_correct_row,
+                    "header_comparison": {
+                        "predicted": header_predicted_row,
+                        "ground_truth": header_correct_row,
+                        "score_gap": header_score_gap,
+                    },
+                    "data_comparison": {
+                        "applicable": bool(correct_data_row > predicted_header_row),
+                        "predicted": data_predicted_row,
+                        "ground_truth": data_correct_row,
+                        "score_gap": data_score_gap,
+                    },
                     "header_miss": {
                         "correct_row": correct_header_row,
                         "predicted_row": predicted_header_row,
