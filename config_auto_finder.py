@@ -114,11 +114,11 @@ WEIGHTS = {
         "sparse_penalty": -0.12,
     },
     "data": {
-        "overlap_with_header": 0.20,
+        "overlap_with_header": 0.12,
         "numeric_ratio": 0.08,
         "value_mix": 0.10,
         "early_after_header": 0.12,
-        "offset_preference": 0.12,
+        "offset_preference": 0.08,
         "unstyled_ratio": 0.05,
         "unique_value_ratio": 0.06,
         "first_non_empty_after_header": 0.14,
