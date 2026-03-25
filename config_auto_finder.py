@@ -100,10 +100,10 @@ WEIGHTS = {
     "header": {
         "non_empty_norm": 0.22,
         "string_ratio": 0.18,
-        "short_text_ratio": 0.12,
+        "short_text_ratio": 0.08,
         "unique_value_ratio": 0.08,
         "style_ratio": 0.08,
-        "followed_by_tabular": 0.12,
+        "followed_by_tabular": 0.15,
         "early_row_bias": 0.02,
         "has_id_like_token": 0.08,
         "has_name_like_token": 0.07,
@@ -512,8 +512,8 @@ def detect_data_row(
         header_columns = set(feature_dump["sheet"].get("active_columns", []))
     header_col_count = max(1, len(header_columns))
     first_non_empty_after_header = next(
-        (row["row_index"] for row in candidates if row["non_empty_count"] <= 1),
-        candidates[0]["row_index"],
+        (row["row_index"] for row in candidates if 0 < row["non_empty_count"] <= 2),
+        0,
     )
     span = max(1, candidates[-1]["row_index"] - (header_row + 1) + 1)
     rows_by_index = {row["row_index"]: row for row in rows}
