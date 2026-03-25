@@ -1,0 +1,74 @@
+[
+  {
+    "data_row": 4,
+    "file": "Myntra-Template.xlsx",
+    "header_row": 3,
+    "sheet": "Accessory Gift Set"
+  },
+  {
+    "data_row": 9,
+    "file": "TataCliq-Arvind-Apparel.xlsx",
+    "header_row": 6,
+    "sheet": "Template"
+  },
+  {
+    "data_row": 6,
+    "file": "Tatacliq-Arvind-Accessories.xlsx",
+    "header_row": 4,
+    "sheet": "in"
+  },
+  {
+    "data_row": 3,
+    "file": "Tatacliq-Arvind-Footwear.xlsx",
+    "header_row": 2,
+    "sheet": "Data"
+  },
+  {
+    "data_row": 3,
+    "file": "ajio-levis-creation.xlsx",
+    "header_row": 2,
+    "sheet": "CONTENT SHEET FOR SS-21"
+  },
+  {
+    "data_row": 4,
+    "file": "ajio-levis-kids.xlsx",
+    "header_row": 1,
+    "sheet": "Kids"
+  },
+  {
+    "data_row": 3,
+    "file": "ajio-levis-listing.xlsx",
+    "header_row": 2,
+    "sheet": "Listing Template"
+  },
+  {
+    "data_row": 4,
+    "file": "ajio-levis-men-final.xlsx",
+    "header_row": 1,
+    "sheet": "Men"
+  },
+  {
+    "data_row": 4,
+    "file": "ajio-levis-men-footwear.xlsx",
+    "header_row": 1,
+    "sheet": "Footwear_Mens"
+  },
+  {
+    "data_row": 6,
+    "file": "ajio-levis-western.xlsx",
+    "header_row": 4,
+    "sheet": "Generic"
+  },
+  {
+    "data_row": 5,
+    "file": "flipkart-template.xlsm",
+    "header_row": 1,
+    "sheet": "baby_carrier_cuddler"
+  },
+  {
+    "data_row": 2,
+    "file": "tatacliq-arvind-accesory.xlsx",
+    "header_row": 1,
+    "sheet": "Accessory"
+  }
+]

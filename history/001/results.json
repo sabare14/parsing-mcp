@@ -1,0 +1,304 @@
+{
+  "delta": {
+    "current_score": 0.883464,
+    "improvement": null,
+    "previous_score": null
+  },
+  "overall_score": 0.883464,
+  "results": [
+    {
+      "correct": {
+        "data": true,
+        "header": true,
+        "sheet": true
+      },
+      "file": "Myntra-Template.xlsx",
+      "gt": {
+        "data_row": 4,
+        "header_row": 3,
+        "sheet": "Accessory Gift Set"
+      },
+      "pred": {
+        "data_row": 4,
+        "header_row": 3,
+        "sheet": "Accessory Gift Set"
+      },
+      "scores": {
+        "data": 1.0,
+        "final": 1.0,
+        "header": 1.0,
+        "sheet": 1.0
+      }
+    },
+    {
+      "correct": {
+        "data": false,
+        "header": false,
+        "sheet": true
+      },
+      "file": "TataCliq-Arvind-Apparel.xlsx",
+      "gt": {
+        "data_row": 9,
+        "header_row": 6,
+        "sheet": "Template"
+      },
+      "pred": {
+        "data_row": 6,
+        "header_row": 5,
+        "sheet": "Template"
+      },
+      "scores": {
+        "data": 0.049787,
+        "final": 0.5253,
+        "header": 0.367879,
+        "sheet": 1.0
+      }
+    },
+    {
+      "correct": {
+        "data": true,
+        "header": true,
+        "sheet": true
+      },
+      "file": "Tatacliq-Arvind-Accessories.xlsx",
+      "gt": {
+        "data_row": 6,
+        "header_row": 4,
+        "sheet": "in"
+      },
+      "pred": {
+        "data_row": 6,
+        "header_row": 4,
+        "sheet": "in"
+      },
+      "scores": {
+        "data": 1.0,
+        "final": 1.0,
+        "header": 1.0,
+        "sheet": 1.0
+      }
+    },
+    {
+      "correct": {
+        "data": false,
+        "header": true,
+        "sheet": true
+      },
+      "file": "Tatacliq-Arvind-Footwear.xlsx",
+      "gt": {
+        "data_row": 3,
+        "header_row": 2,
+        "sheet": "Data"
+      },
+      "pred": {
+        "data_row": 4,
+        "header_row": 2,
+        "sheet": "Data"
+      },
+      "scores": {
+        "data": 0.367879,
+        "final": 0.810364,
+        "header": 1.0,
+        "sheet": 1.0
+      }
+    },
+    {
+      "correct": {
+        "data": true,
+        "header": true,
+        "sheet": true
+      },
+      "file": "ajio-levis-creation.xlsx",
+      "gt": {
+        "data_row": 3,
+        "header_row": 2,
+        "sheet": "CONTENT SHEET FOR SS-21"
+      },
+      "pred": {
+        "data_row": 3,
+        "header_row": 2,
+        "sheet": "CONTENT SHEET FOR SS-21"
+      },
+      "scores": {
+        "data": 1.0,
+        "final": 1.0,
+        "header": 1.0,
+        "sheet": 1.0
+      }
+    },
+    {
+      "correct": {
+        "data": true,
+        "header": true,
+        "sheet": true
+      },
+      "file": "ajio-levis-kids.xlsx",
+      "gt": {
+        "data_row": 4,
+        "header_row": 1,
+        "sheet": "Kids"
+      },
+      "pred": {
+        "data_row": 4,
+        "header_row": 1,
+        "sheet": "Kids"
+      },
+      "scores": {
+        "data": 1.0,
+        "final": 1.0,
+        "header": 1.0,
+        "sheet": 1.0
+      }
+    },
+    {
+      "correct": {
+        "data": true,
+        "header": true,
+        "sheet": true
+      },
+      "file": "ajio-levis-listing.xlsx",
+      "gt": {
+        "data_row": 3,
+        "header_row": 2,
+        "sheet": "Listing Template"
+      },
+      "pred": {
+        "data_row": 3,
+        "header_row": 2,
+        "sheet": "Listing Template"
+      },
+      "scores": {
+        "data": 1.0,
+        "final": 1.0,
+        "header": 1.0,
+        "sheet": 1.0
+      }
+    },
+    {
+      "correct": {
+        "data": false,
+        "header": true,
+        "sheet": true
+      },
+      "file": "ajio-levis-men-final.xlsx",
+      "gt": {
+        "data_row": 4,
+        "header_row": 1,
+        "sheet": "Men"
+      },
+      "pred": {
+        "data_row": 5,
+        "header_row": 1,
+        "sheet": "Men"
+      },
+      "scores": {
+        "data": 0.367879,
+        "final": 0.810364,
+        "header": 1.0,
+        "sheet": 1.0
+      }
+    },
+    {
+      "correct": {
+        "data": true,
+        "header": true,
+        "sheet": true
+      },
+      "file": "ajio-levis-men-footwear.xlsx",
+      "gt": {
+        "data_row": 4,
+        "header_row": 1,
+        "sheet": "Footwear_Mens"
+      },
+      "pred": {
+        "data_row": 4,
+        "header_row": 1,
+        "sheet": "Footwear_Mens"
+      },
+      "scores": {
+        "data": 1.0,
+        "final": 1.0,
+        "header": 1.0,
+        "sheet": 1.0
+      }
+    },
+    {
+      "correct": {
+        "data": false,
+        "header": false,
+        "sheet": true
+      },
+      "file": "ajio-levis-western.xlsx",
+      "gt": {
+        "data_row": 6,
+        "header_row": 4,
+        "sheet": "Generic"
+      },
+      "pred": {
+        "data_row": 3,
+        "header_row": 2,
+        "sheet": "Generic"
+      },
+      "scores": {
+        "data": 0.049787,
+        "final": 0.455537,
+        "header": 0.135335,
+        "sheet": 1.0
+      }
+    },
+    {
+      "correct": {
+        "data": true,
+        "header": true,
+        "sheet": true
+      },
+      "file": "flipkart-template.xlsm",
+      "gt": {
+        "data_row": 5,
+        "header_row": 1,
+        "sheet": "baby_carrier_cuddler"
+      },
+      "pred": {
+        "data_row": 5,
+        "header_row": 1,
+        "sheet": "baby_carrier_cuddler"
+      },
+      "scores": {
+        "data": 1.0,
+        "final": 1.0,
+        "header": 1.0,
+        "sheet": 1.0
+      }
+    },
+    {
+      "correct": {
+        "data": true,
+        "header": true,
+        "sheet": true
+      },
+      "file": "tatacliq-arvind-accesory.xlsx",
+      "gt": {
+        "data_row": 2,
+        "header_row": 1,
+        "sheet": "Accessory"
+      },
+      "pred": {
+        "data_row": 2,
+        "header_row": 1,
+        "sheet": "Accessory"
+      },
+      "scores": {
+        "data": 1.0,
+        "final": 1.0,
+        "header": 1.0,
+        "sheet": 1.0
+      }
+    }
+  ],
+  "summary": {
+    "correct_data": 8,
+    "correct_header": 10,
+    "correct_sheet": 12,
+    "total_files": 12
+  }
+}
