@@ -135,10 +135,14 @@ def main():
         before_iter = None
         after_iter = None
         try:
+            logging.info(f"[iter {loop}] start")
+            logging.info(f"[iter {loop}] running baseline evaluation")
             before_iter, before_results, debug = run_evaluation()
             prev_score = parse_overall_score(before_results)
+            logging.info(f"[iter {loop}] baseline history={before_iter:03d} overall_score={prev_score:.6f}")
             failures = debug.get("failures", [])
             current_weights = debug.get("current_weights", {})
+            logging.info(f"[iter {loop}] failures_in_prompt={len(failures)}")
             llm_prompt = (
                 "You are improving config_auto_finder.py.\n"
                 "Edit ONLY config_auto_finder.py directly in the workspace.\n"
@@ -159,15 +163,18 @@ def main():
                 f"current_weights={json.dumps(current_weights, sort_keys=True)}\n"
             )
             before_text = CONFIG_FILE.read_text(encoding="utf-8")
+            logging.info(f"[iter {loop}] calling pi")
             plan_output = call_pi(llm_prompt)
             after_text = CONFIG_FILE.read_text(encoding="utf-8")
             changed = before_text != after_text
             diff_text = get_config_diff() if changed else ""
             logging.info(f"pi_output={plan_output}")
             if not changed:
+                logging.info(f"[iter {loop}] no config change from pi")
                 status = "skipped"
             else:
                 changed_lines = count_changed_lines(diff_text)
+                logging.info(f"[iter {loop}] config changed_lines={changed_lines}")
                 if changed_lines > MAX_CONFIG_CHANGED_LINES:
                     restore_config_file()
                     status = "skipped_large_diff"
@@ -180,31 +187,42 @@ def main():
                     changed = False
                 else:
                     logging.info(f"config_diff:\n{diff_text}")
+                    logging.info(f"[iter {loop}] committing change")
                     git_commit(loop)
                     try:
+                        logging.info(f"[iter {loop}] running post-change evaluation")
                         after_iter, after_results, _ = run_evaluation()
+                        logging.info(f"[iter {loop}] post-change history={after_iter:03d}")
                     except Exception:
+                        logging.info(f"[iter {loop}] post-change evaluation failed; reverting commit")
                         git_revert_last_commit()
                         raise
                     try:
                         curr_score = parse_overall_score(after_results)
                     except ValueError as exc:
+                        logging.info(f"[iter {loop}] invalid post-change score; reverting commit")
                         git_revert_last_commit()
                         status = "reverted_invalid_eval"
                         logging.info(f"invalid evaluation result: {exc}")
                     else:
                         improvement = round(curr_score - prev_score, 6)
+                        logging.info(
+                            f"[iter {loop}] post-change overall_score={curr_score:.6f} improvement={improvement:+.6f}"
+                        )
                         if curr_score > prev_score + 1e-6:
                             status = "kept"
+                            logging.info(f"[iter {loop}] improvement detected; keeping commit")
                         else:
                             git_revert_last_commit()
                             status = "reverted"
+                            logging.info(f"[iter {loop}] no improvement; reverted commit")
         except Exception:
             status = (
                 status
                 if status in {"kept", "reverted", "reverted_invalid_eval", "skipped_large_diff"}
                 else "skipped"
             )
+            logging.info(f"[iter {loop}] iteration failed; status={status}")
         delta_str = f"{improvement:+.6f}" if improvement is not None else "N/A"
         score_str = f"{curr_score} ({delta_str})" if curr_score is not None else "N/A"
         logging.info(f"Iteration {loop}\nScore: {score_str}\nStatus: {status}")
