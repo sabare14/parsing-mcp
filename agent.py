@@ -19,8 +19,11 @@ SCORE_MAX = 1.0
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 
-def run_evaluation():
-    result = subprocess.run([sys.executable, "evaluate.py"], text=True)
+def run_evaluation(delta_from_iter=None):
+    cmd = [sys.executable, "evaluate.py"]
+    if delta_from_iter is not None:
+        cmd.extend(["--delta-from-iter", str(delta_from_iter)])
+    result = subprocess.run(cmd, text=True, capture_output=True)
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "evaluate.py failed")
     iters = sorted(
@@ -35,6 +38,20 @@ def run_evaluation():
     return int(latest.name), results, debug
 
 
+def load_history_iteration(iteration):
+    iter_dirs = [
+        p
+        for p in HISTORY_DIR.iterdir()
+        if p.is_dir() and p.name.isdigit() and int(p.name) == int(iteration)
+    ]
+    if not iter_dirs:
+        raise RuntimeError(f"History iteration not found: {iteration}")
+    iteration_dir = iter_dirs[0]
+    results = json.loads((iteration_dir / "results.json").read_text(encoding="utf-8"))
+    debug = json.loads((iteration_dir / "debug.json").read_text(encoding="utf-8"))
+    return results, debug
+
+
 def call_pi(prompt_text):
     try:
         result = subprocess.run(
@@ -45,7 +62,7 @@ def call_pi(prompt_text):
             timeout=180,
         )
     except subprocess.TimeoutExpired as exc:
-        raise TimeoutError("Pi timeout after 80 seconds") from exc
+        raise TimeoutError("Pi timeout after 180 seconds") from exc
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "pi call failed")
     return result.stdout.strip()
@@ -135,8 +152,22 @@ def classify_exception(exc):
     return "unexpected_error"
 
 
+def verify_best_state(best_iter, best_config_text):
+    current_config_text = CONFIG_FILE.read_text(encoding="utf-8")
+    if current_config_text == best_config_text:
+        logging.info(f"Best-state sanity check passed (iter={best_iter}).")
+    else:
+        logging.info(f"Best-state mismatch: working config differs from best_iter={best_iter}.")
+
+
 def main():
     optimizer_text = OPTIMIZER_FILE.read_text(encoding="utf-8")
+    logging.info("Running initial evaluation to establish best state...")
+    initial_iter, initial_results, _ = run_evaluation()
+    best_score = parse_overall_score(initial_results)
+    best_iter = initial_iter
+    best_config_text = CONFIG_FILE.read_text(encoding="utf-8")
+    logging.info(f"Initial best state: score={best_score:.6f} (iter={best_iter})")
     loop = 1
     no_improvement_streak = 0
     while loop <= MAX_ITERS:
@@ -147,42 +178,45 @@ def main():
         improvement = None
         before_iter = None
         after_iter = None
+        pi_output = None
         try:
             logging.info(f"--- Iteration {loop}/{MAX_ITERS} started ---")
-            logging.info("Running baseline evaluation...")
-            before_iter, before_results, debug = run_evaluation()
-            prev_score = parse_overall_score(before_results)
+            prev_score = best_score
+            before_iter = best_iter
+            _, debug = load_history_iteration(best_iter)
             failures = debug.get("failures", [])
             current_weights = debug.get("current_weights", {})
             logging.info(
-                f"Baseline ready: history={before_iter}, score={prev_score:.6f}, failures={len(failures)}"
+                f"Best so far: score={best_score:.6f} (iter={best_iter}), failures={len(failures)}"
             )
             llm_prompt = (
                 "You are improving config_auto_finder.py.\n"
-                "Edit ONLY config_auto_finder.py directly in the workspace.\n"
-                "Inspect failed cases and compare predicted vs ground-truth candidate scores/components.\n"
-                "Focus on 1-2 failed cases only.\n"
-                "Identify the smallest edit likely to flip at least one failed ranking.\n"
-                "Avoid edits that only smooth weights without likely ranking impact.\n"
-                "Make only 1-2 focused code changes.\n"
-                "In summary, state exactly what changed and which failure(s) it targets.\n"
-                "Then output strict JSON only in this format:\n"
-                '{"changed": true|false, "summary": "what changed and why"}\n'
-                "If no useful change, set changed=false and explain why in summary.\n"
-                "No markdown and no extra text.\n\n"
+                "Edit ONLY config_auto_finder.py directly in the workspace.\n\n"
+
+                "Focus on 2-3 failed cases only.\n"
+                "For each, explain why the predicted row beat the correct row, then fix it.\n"
+                "Make 1-2 focused changes that are likely to flip at least one failed ranking.\n"
+                "Avoid small changes that do not affect candidate ordering.\n\n"
+
+                "Return strict JSON only:\n"
+                '{"changed": true|false, "summary": "what changed", "why": "one line"}\n'
+                "No markdown. No extra text.\n\n"
+
                 f"optimizer.md:\n{optimizer_text}\n\n"
                 f"debug.json:\n{json.dumps(debug, indent=2, sort_keys=True)}\n\n"
-                f"overall_score={prev_score}\n"
+                f"overall_score={best_score}\n"
                 f"failures={len(failures)}\n"
                 f"current_weights={json.dumps(current_weights, sort_keys=True)}\n"
             )
+
+
             before_text = CONFIG_FILE.read_text(encoding="utf-8")
             logging.info("Calling Pi for a candidate improvement...")
-            plan_output = call_pi(llm_prompt)
+            pi_output = call_pi(llm_prompt)
             after_text = CONFIG_FILE.read_text(encoding="utf-8")
             changed = before_text != after_text
             diff_text = get_config_diff() if changed else ""
-            logging.info(f"pi_output={plan_output}")
+            logging.info(f"pi_output={pi_output}")
             if not changed:
                 logging.info("Pi made no file change. Skipping commit.")
                 status = "skipped"
@@ -204,7 +238,7 @@ def main():
                     git_commit(loop)
                     try:
                         logging.info("Running post-change evaluation...")
-                        after_iter, after_results, _ = run_evaluation()
+                        after_iter, after_results, _ = run_evaluation(delta_from_iter=best_iter)
                     except Exception:
                         logging.info("Post-change evaluation failed. Reverting commit.")
                         git_revert_last_commit()
@@ -217,13 +251,17 @@ def main():
                         status = "reverted_invalid_eval"
                         logging.info(f"invalid evaluation result: {exc}")
                     else:
-                        improvement = round(curr_score - prev_score, 6)
+                        improvement = round(curr_score - best_score, 6)
                         logging.info(
                             f"Post-change score: history={after_iter}, score={curr_score:.6f}, improvement={improvement:+.6f}"
                         )
-                        if curr_score > prev_score + 1e-6:
+                        if curr_score > best_score + 1e-6:
                             status = "kept"
+                            best_score = curr_score
+                            best_iter = after_iter
+                            best_config_text = CONFIG_FILE.read_text(encoding="utf-8")
                             logging.info("Improved. Keeping commit.")
+                            logging.info(f"Best so far: score={best_score:.6f} (iter={best_iter})")
                         else:
                             git_revert_last_commit()
                             status = "reverted"
@@ -249,6 +287,8 @@ def main():
         logging.info(
             f"Iteration {loop} complete: status={status}, score={score_str}, delta={delta_str}"
         )
+        logging.info(f"Best so far: score={best_score:.6f} (iter={best_iter})")
+        verify_best_state(best_iter, best_config_text)
         logging.info(f"--- Iteration {loop}/{MAX_ITERS} finished ---")
         append_history(
             {
@@ -260,6 +300,9 @@ def main():
                 "previous_score": prev_score,
                 "current_score": curr_score,
                 "improvement": improvement,
+                "best_score": best_score,
+                "best_iter": best_iter,
+                "pi_output": pi_output,
             }
         )
         if status == "kept":

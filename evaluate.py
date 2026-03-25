@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import logging
 import math
@@ -459,7 +460,7 @@ def evaluate(ground_truth_json: str | Path, excel_dir: str | Path) -> tuple[dict
     return result_payload, debug_payload
 
 
-def main() -> dict[str, Any]:
+def main(delta_from_iter: int | None = None) -> dict[str, Any]:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     run_started = time.perf_counter()
     normalized_ground_truth = Path("ground_truth_normalized.json")
@@ -477,10 +478,20 @@ def main() -> dict[str, Any]:
     current_iter_dir = history_root / f"{next_iter:03d}"
     current_iter_dir.mkdir(parents=True, exist_ok=False)
 
+    delta_base_iter = prev_iter
+    if delta_from_iter is not None:
+        if delta_from_iter in existing_iters:
+            delta_base_iter = delta_from_iter
+        else:
+            logger.warning(
+                "delta_from_iter=%s not found in history; using latest previous iteration instead",
+                delta_from_iter,
+            )
+
     prev_score = None
     prev_file_scores: dict[str, float] = {}
-    if prev_iter is not None:
-        prev_results_path = history_root / f"{prev_iter:03d}" / "results.json"
+    if delta_base_iter is not None:
+        prev_results_path = history_root / f"{delta_base_iter:03d}" / "results.json"
         if prev_results_path.exists():
             prev_results = json.loads(prev_results_path.read_text(encoding="utf-8"))
             if prev_results.get("overall_score") is not None:
@@ -502,6 +513,7 @@ def main() -> dict[str, Any]:
         "previous_score": round(prev_score, 6) if prev_score is not None else None,
         "current_score": round(current_score, 6),
         "improvement": improvement,
+        "baseline_iter": delta_base_iter,
     }
 
     for failure in debug_payload.get("failures", []):
@@ -530,4 +542,7 @@ def main() -> dict[str, Any]:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--delta-from-iter", type=int, default=None)
+    args = parser.parse_args()
+    main(delta_from_iter=args.delta_from_iter)
