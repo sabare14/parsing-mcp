@@ -1,0 +1,295 @@
+{
+  "generated_at": "2026-03-22T17:22:51.230528+00:00",
+  "ground_truth_dir": "/home/streamoid/projects/parsing-mcp/evaluation/ground_truth",
+  "templates_root": "/home/streamoid/projects/parsing-mcp/templates",
+  "weights": {
+    "sheet": 0.5,
+    "header_row": 0.25,
+    "data_row": 0.25
+  },
+  "summary": {
+    "total_templates": 12,
+    "strict_match_count": 3,
+    "strict_match_rate": 0.25,
+    "average_weighted_score": 0.729167,
+    "val_error": 0.270833
+  },
+  "results": [
+    {
+      "ground_truth_file": "Myntra-Template.xlsx.json",
+      "template_file": "Myntra-Template.xlsx",
+      "template_path": "/home/streamoid/projects/parsing-mcp/templates/Myntra-Template.xlsx",
+      "expected": {
+        "sheet_name": "Accessory Gift Set",
+        "header_row": 3,
+        "data_row": 4
+      },
+      "predicted": {
+        "sheet_name": "Accessory Gift Set",
+        "header_row": 3,
+        "data_row": 4
+      },
+      "matches": {
+        "sheet": true,
+        "header_row": true,
+        "data_row": true,
+        "strict": true
+      },
+      "weighted_score": 1.0,
+      "status": "ok"
+    },
+    {
+      "ground_truth_file": "TataCliq-Arvind-Apparel.xlsx.json",
+      "template_file": "TataCliq-Arvind-Apparel.xlsx",
+      "template_path": "/home/streamoid/projects/parsing-mcp/templates/TataCliq-Arvind-Apparel.xlsx",
+      "expected": {
+        "sheet_name": "Template",
+        "header_row": 6,
+        "data_row": 9
+      },
+      "predicted": {
+        "sheet_name": "Template",
+        "header_row": 6,
+        "data_row": 7
+      },
+      "matches": {
+        "sheet": true,
+        "header_row": true,
+        "data_row": false,
+        "strict": false
+      },
+      "weighted_score": 0.75,
+      "status": "ok"
+    },
+    {
+      "ground_truth_file": "Tatacliq-Arvind-Accessories.xlsx.json",
+      "template_file": "Tatacliq-Arvind-Accessories.xlsx",
+      "template_path": "/home/streamoid/projects/parsing-mcp/templates/Tatacliq-Arvind-Accessories.xlsx",
+      "expected": {
+        "sheet_name": "in",
+        "header_row": 4,
+        "data_row": 6
+      },
+      "predicted": {
+        "sheet_name": "in",
+        "header_row": 4,
+        "data_row": 5
+      },
+      "matches": {
+        "sheet": true,
+        "header_row": true,
+        "data_row": false,
+        "strict": false
+      },
+      "weighted_score": 0.75,
+      "status": "ok"
+    },
+    {
+      "ground_truth_file": "Tatacliq-Arvind-Footwear.xlsx.json",
+      "template_file": "Tatacliq-Arvind-Footwear.xlsx",
+      "template_path": "/home/streamoid/projects/parsing-mcp/templates/Tatacliq-Arvind-Footwear.xlsx",
+      "expected": {
+        "sheet_name": "Data",
+        "header_row": 2,
+        "data_row": 3
+      },
+      "predicted": {
+        "sheet_name": "Data",
+        "header_row": 2,
+        "data_row": 4
+      },
+      "matches": {
+        "sheet": true,
+        "header_row": true,
+        "data_row": false,
+        "strict": false
+      },
+      "weighted_score": 0.75,
+      "status": "ok"
+    },
+    {
+      "ground_truth_file": "ajio-levis-creation.xlsx.json",
+      "template_file": "ajio-levis-creation.xlsx",
+      "template_path": "/home/streamoid/projects/parsing-mcp/templates/ajio-levis-creation.xlsx",
+      "expected": {
+        "sheet_name": "CONTENT SHEET FOR SS-21",
+        "header_row": 2,
+        "data_row": 3
+      },
+      "predicted": {
+        "sheet_name": "BAGS VALUE",
+        "header_row": 2,
+        "data_row": 3
+      },
+      "matches": {
+        "sheet": false,
+        "header_row": true,
+        "data_row": true,
+        "strict": false
+      },
+      "weighted_score": 0.5,
+      "status": "ok"
+    },
+    {
+      "ground_truth_file": "ajio-levis-kids.xlsx.json",
+      "template_file": "ajio-levis-kids.xlsx",
+      "template_path": "/home/streamoid/projects/parsing-mcp/templates/ajio-levis-kids.xlsx",
+      "expected": {
+        "sheet_name": "Kids",
+        "header_row": 1,
+        "data_row": 4
+      },
+      "predicted": {
+        "sheet_name": "Kids",
+        "header_row": 1,
+        "data_row": 2
+      },
+      "matches": {
+        "sheet": true,
+        "header_row": true,
+        "data_row": false,
+        "strict": false
+      },
+      "weighted_score": 0.75,
+      "status": "ok"
+    },
+    {
+      "ground_truth_file": "ajio-levis-listing.xlsx.json",
+      "template_file": "ajio-levis-listing.xlsx",
+      "template_path": "/home/streamoid/projects/parsing-mcp/templates/ajio-levis-listing.xlsx",
+      "expected": {
+        "sheet_name": "Listing Template",
+        "header_row": 2,
+        "data_row": 3
+      },
+      "predicted": {
+        "sheet_name": "Listing Template",
+        "header_row": 2,
+        "data_row": 3
+      },
+      "matches": {
+        "sheet": true,
+        "header_row": true,
+        "data_row": true,
+        "strict": true
+      },
+      "weighted_score": 1.0,
+      "status": "ok"
+    },
+    {
+      "ground_truth_file": "ajio-levis-men-final.xlsx.json",
+      "template_file": "ajio-levis-men-final.xlsx",
+      "template_path": "/home/streamoid/projects/parsing-mcp/templates/ajio-levis-men-final.xlsx",
+      "expected": {
+        "sheet_name": "Men",
+        "header_row": 1,
+        "data_row": 4
+      },
+      "predicted": {
+        "sheet_name": "Style Types",
+        "header_row": 1,
+        "data_row": 2
+      },
+      "matches": {
+        "sheet": false,
+        "header_row": true,
+        "data_row": false,
+        "strict": false
+      },
+      "weighted_score": 0.25,
+      "status": "ok"
+    },
+    {
+      "ground_truth_file": "ajio-levis-men-footwear.xlsx.json",
+      "template_file": "ajio-levis-men-footwear.xlsx",
+      "template_path": "/home/streamoid/projects/parsing-mcp/templates/ajio-levis-men-footwear.xlsx",
+      "expected": {
+        "sheet_name": "Footwear_Mens",
+        "header_row": 1,
+        "data_row": 4
+      },
+      "predicted": {
+        "sheet_name": "Footwear_Mens",
+        "header_row": 1,
+        "data_row": 2
+      },
+      "matches": {
+        "sheet": true,
+        "header_row": true,
+        "data_row": false,
+        "strict": false
+      },
+      "weighted_score": 0.75,
+      "status": "ok"
+    },
+    {
+      "ground_truth_file": "ajio-levis-western.xlsx.json",
+      "template_file": "ajio-levis-western.xlsx",
+      "template_path": "/home/streamoid/projects/parsing-mcp/templates/ajio-levis-western.xlsx",
+      "expected": {
+        "sheet_name": "Generic",
+        "header_row": 4,
+        "data_row": 6
+      },
+      "predicted": {
+        "sheet_name": "Generic",
+        "header_row": 2,
+        "data_row": 3
+      },
+      "matches": {
+        "sheet": true,
+        "header_row": false,
+        "data_row": false,
+        "strict": false
+      },
+      "weighted_score": 0.5,
+      "status": "ok"
+    },
+    {
+      "ground_truth_file": "flipkart-template.xlsm.json",
+      "template_file": "flipkart-template.xlsm",
+      "template_path": "/home/streamoid/projects/parsing-mcp/templates/flipkart-template.xlsm",
+      "expected": {
+        "sheet_name": "baby_carrier_cuddler",
+        "header_row": 1,
+        "data_row": 5
+      },
+      "predicted": {
+        "sheet_name": "baby_carrier_cuddler",
+        "header_row": 1,
+        "data_row": 2
+      },
+      "matches": {
+        "sheet": true,
+        "header_row": true,
+        "data_row": false,
+        "strict": false
+      },
+      "weighted_score": 0.75,
+      "status": "ok"
+    },
+    {
+      "ground_truth_file": "tatacliq-arvind-accesory.xlsx.json",
+      "template_file": "tatacliq-arvind-accesory.xlsx",
+      "template_path": "/home/streamoid/projects/parsing-mcp/templates/tatacliq-arvind-accesory.xlsx",
+      "expected": {
+        "sheet_name": "Accessory",
+        "header_row": 1,
+        "data_row": 2
+      },
+      "predicted": {
+        "sheet_name": "Accessory",
+        "header_row": 1,
+        "data_row": 2
+      },
+      "matches": {
+        "sheet": true,
+        "header_row": true,
+        "data_row": true,
+        "strict": true
+      },
+      "weighted_score": 1.0,
+      "status": "ok"
+    }
+  ]
+}

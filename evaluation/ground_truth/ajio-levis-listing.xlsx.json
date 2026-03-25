@@ -1,0 +1,18 @@
+{
+  "template_file": "ajio-levis-listing.xlsx",
+  "sheet_name": "Listing Template",
+  "header_row": 2,
+  "data_row": 3,
+  "review_status": "reviewed",
+  "bootstrap": {
+    "generated_at": "2026-03-22T16:58:10.614539+00:00",
+    "source": "auto_detect_config_from_excel",
+    "confidence": {
+      "workbook": 0.8572,
+      "sheet": 0.6766,
+      "header_row": 0.661,
+      "data_row": 0.5896,
+      "overall": 0.6906
+    }
+  }
+}

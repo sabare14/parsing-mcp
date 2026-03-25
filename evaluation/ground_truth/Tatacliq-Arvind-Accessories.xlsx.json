@@ -1,0 +1,18 @@
+{
+  "template_file": "Tatacliq-Arvind-Accessories.xlsx",
+  "sheet_name": "in",
+  "header_row": 4,
+  "data_row": 6,
+  "review_status": "reviewed",
+  "bootstrap": {
+    "generated_at": "2026-03-22T16:55:08.910976+00:00",
+    "source": "auto_detect_config_from_excel",
+    "confidence": {
+      "workbook": 0.8445,
+      "sheet": 0.9539,
+      "header_row": 0.6994,
+      "data_row": 0.62,
+      "overall": 0.7889
+    }
+  }
+}

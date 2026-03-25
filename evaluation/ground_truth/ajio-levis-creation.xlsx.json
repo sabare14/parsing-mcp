@@ -1,0 +1,18 @@
+{
+  "template_file": "ajio-levis-creation.xlsx",
+  "sheet_name": "CONTENT SHEET FOR SS-21",
+  "header_row": 2,
+  "data_row": 3,
+  "review_status": "reviewed",
+  "bootstrap": {
+    "generated_at": "2026-03-22T16:55:09.083981+00:00",
+    "source": "auto_detect_config_from_excel",
+    "confidence": {
+      "workbook": 0.7946,
+      "sheet": 0.5396,
+      "header_row": 0.6414,
+      "data_row": 0.417,
+      "overall": 0.5966
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "template_file": "ajio-levis-men-footwear.xlsx",
+  "sheet_name": "Footwear_Mens",
+  "header_row": 1,
+  "data_row": 4,
+  "review_status": "reviewed",
+  "bootstrap": {
+    "generated_at": "2026-03-22T16:58:10.986905+00:00",
+    "source": "auto_detect_config_from_excel",
+    "confidence": {
+      "workbook": 0.8892,
+      "sheet": 0.6749,
+      "header_row": 0.729,
+      "data_row": 0.6421,
+      "overall": 0.7274
+    }
+  }
+}

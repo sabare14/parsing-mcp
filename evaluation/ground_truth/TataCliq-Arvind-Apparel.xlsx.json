@@ -1,0 +1,18 @@
+{
+  "template_file": "TataCliq-Arvind-Apparel.xlsx",
+  "sheet_name": "Template",
+  "header_row": 6,
+  "data_row": 9,
+  "review_status": "reviewed",
+  "bootstrap": {
+    "generated_at": "2026-03-22T16:55:08.892051+00:00",
+    "source": "auto_detect_config_from_excel",
+    "confidence": {
+      "workbook": 0.838,
+      "sheet": 0.6308,
+      "header_row": 0.6167,
+      "data_row": 0.4714,
+      "overall": 0.6361
+    }
+  }
+}
