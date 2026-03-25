@@ -36,13 +36,16 @@ def run_evaluation():
 
 
 def call_pi(prompt_text):
-    result = subprocess.run(
-        ["npx", "@mariozechner/pi-coding-agent"],
-        input=prompt_text,
-        text=True,
-        capture_output=True,
-        timeout=80,
-    )
+    try:
+        result = subprocess.run(
+            ["npx", "@mariozechner/pi-coding-agent"],
+            input=prompt_text,
+            text=True,
+            capture_output=True,
+            timeout=180,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise TimeoutError("Pi timeout after 80 seconds") from exc
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "pi call failed")
     return result.stdout.strip()
@@ -120,6 +123,16 @@ def git_revert_last_commit():
 def append_history(record):
     with AGENT_HISTORY_FILE.open("a", encoding="utf-8") as f:
         f.write(json.dumps(record, sort_keys=True) + "\n")
+
+
+def classify_exception(exc):
+    if isinstance(exc, TimeoutError):
+        return "timeout"
+    if isinstance(exc, json.JSONDecodeError):
+        return "parsing_issue"
+    if isinstance(exc, subprocess.SubprocessError):
+        return "subprocess_error"
+    return "unexpected_error"
 
 
 def main():
@@ -215,13 +228,22 @@ def main():
                             git_revert_last_commit()
                             status = "reverted"
                             logging.info("No improvement. Reverted commit.")
-        except Exception:
+        except Exception as exc:
             status = (
                 status
                 if status in {"kept", "reverted", "reverted_invalid_eval", "skipped_large_diff"}
                 else "skipped"
             )
-            logging.info(f"Iteration error handled. status={status}")
+            error_type = type(exc).__name__
+            error_text = str(exc).strip() or repr(exc)
+            error_category = classify_exception(exc)
+            logging.info(
+                "Iteration error handled. status=%s, category=%s, error_type=%s, error=%s",
+                status,
+                error_category,
+                error_type,
+                error_text,
+            )
         delta_str = f"{improvement:+.6f}" if improvement is not None else "N/A"
         score_str = f"{curr_score:.6f}" if curr_score is not None else "N/A"
         logging.info(

@@ -65,8 +65,6 @@ TOKEN_SIGNALS = {
         "dob",
         "expiry",
         "validity",
-        "from",
-        "to",
         "dd",
         "mm",
         "yyyy",
