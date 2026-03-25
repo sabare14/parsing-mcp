@@ -10,9 +10,9 @@ HISTORY_DIR = Path("history")
 CONFIG_FILE = Path("config_auto_finder.py")
 OPTIMIZER_FILE = Path("optimizer.md")
 AGENT_HISTORY_FILE = Path("agent_history.jsonl")
-MAX_ITERS = 20
+MAX_ITERS = 100
 MAX_CONFIG_CHANGED_LINES = 120
-NO_IMPROVEMENT_LIMIT = 3
+NO_IMPROVEMENT_LIMIT = 4
 SCORE_MIN = 0.0
 SCORE_MAX = 1.0
 
@@ -59,10 +59,10 @@ def call_pi(prompt_text):
             input=prompt_text,
             text=True,
             capture_output=True,
-            timeout=180,
+            timeout=240,
         )
     except subprocess.TimeoutExpired as exc:
-        raise TimeoutError("Pi timeout after 180 seconds") from exc
+        raise TimeoutError("Pi timeout after 240 seconds") from exc
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "pi call failed")
     return result.stdout.strip()
@@ -192,12 +192,16 @@ def main():
             llm_prompt = (
                 "You are improving config_auto_finder.py.\n"
                 "Edit ONLY config_auto_finder.py directly in the workspace.\n\n"
+                "Do not explore files.\n"
+                "Do not scan the repository.\n"
+                "Only modify config_auto_finder.py.\n\n"
 
                 "Focus on 2-3 failed cases only.\n"
                 "For each, explain why the predicted row beat the correct row, then fix it.\n"
                 "Make 1-2 focused changes that are likely to flip at least one failed ranking.\n"
                 "Avoid small changes that do not affect candidate ordering.\n\n"
 
+                "Do not plan extensively. Make the change immediately after brief reasoning. Keep reasoning short. Do not over-analyze.\n\n"
                 "Return strict JSON only:\n"
                 '{"changed": true|false, "summary": "what changed", "why": "one line"}\n'
                 "No markdown. No extra text.\n\n"
