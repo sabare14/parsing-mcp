@@ -512,7 +512,7 @@ def detect_data_row(
         header_columns = set(feature_dump["sheet"].get("active_columns", []))
     header_col_count = max(1, len(header_columns))
     first_non_empty_after_header = next(
-        (row["row_index"] for row in candidates if row["non_empty_count"] >= 2),
+        (row["row_index"] for row in candidates if row["non_empty_count"] <= 1),
         candidates[0]["row_index"],
     )
     span = max(1, candidates[-1]["row_index"] - (header_row + 1) + 1)
