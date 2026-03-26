@@ -465,7 +465,7 @@ def main(delta_from_iter: int | None = None) -> dict[str, Any]:
     run_started = time.perf_counter()
     normalized_ground_truth = Path("ground_truth_normalized.json")
     excel_dir = Path("templates")
-    history_root = Path("history")
+    history_root = Path("history_old")
 
     result_payload, debug_payload = evaluate(normalized_ground_truth, excel_dir)
 

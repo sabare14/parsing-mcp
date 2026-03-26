@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 history/
 agent_history.jsonl
+history_old/
+agent_history_old.jsonl

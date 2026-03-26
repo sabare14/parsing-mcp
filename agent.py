@@ -6,11 +6,11 @@ import sys
 import time
 from pathlib import Path
 
-HISTORY_DIR = Path("history")
+HISTORY_DIR = Path("history_old")
 CONFIG_FILE = Path("config_auto_finder.py")
 OPTIMIZER_FILE = Path("optimizer.md")
 DOMAIN_KNOWLEDGE_FILE = Path("domain_knowledge.md")
-AGENT_HISTORY_FILE = Path("agent_history.jsonl")
+AGENT_HISTORY_FILE = Path("agent_history_old.jsonl")
 MAX_ITERS = 100
 MAX_CONFIG_CHANGED_LINES = 120
 NO_IMPROVEMENT_LIMIT = 6
@@ -231,7 +231,7 @@ def main():
 
                 "Focus on 2-3 failed cases only.\n"
                 "For each, explain why the predicted row beat the correct row, then fix it.\n"
-                "Make 1-2 focused changes that are likely to flip at least one failed ranking.\n"
+                "Make 1-2 FOCUSED changes that are likely to flip at least one failed ranking.\n"
                 "Avoid small changes that do not affect candidate ordering.\n\n"
 
                 "Last 2-3 Pi outputs (recent failed attempts) are included below.\n"
@@ -240,7 +240,13 @@ def main():
 
                 "Do not plan extensively. Make the change immediately after brief reasoning. Keep reasoning short. Do not over-analyze.\n\n"
                 "Return strict JSON only:\n"
-                '{"changed": true|false, "summary": "what changed", "why": "one line"}\n'
+                """example : {
+                    "changed": true|false,
+                    "hypothesis": "short_name",
+                    "change_type": "tuning|logic|structural",
+                    "summary": "what changed",
+                    "why": "why this fixes ranking"
+                    }"""
                 "No markdown. No extra text.\n\n"
 
                 f"optimizer.md:\n{optimizer_text}\n\n"

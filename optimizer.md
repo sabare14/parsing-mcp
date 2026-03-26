@@ -1,297 +1,264 @@
-# Autonomous Heuristic Optimizer
+# optimizer
+
+This is an autonomous optimization loop for improving a rule-based Excel template parser.
+
+You modify `config_auto_finder.py` to improve evaluation score.
+
+---
 
 ## Objective
 
-Improve detection accuracy for:
+The system predicts:
 
-- sheet
-- header_row
-- data_row
+- `sheet_name`
+- `header_row`
+- `data_row`
 
-Maximize `overall_score` across the full dataset.
+Evaluation is hierarchical:
 
-The dataset is small, so changes must generalize across templates instead of exploiting one-off quirks.
+- If `sheet_name` is wrong → score = 0
+- If correct sheet:
+  - `header_row` is scored by distance
+  - `data_row` is scored asymmetrically:
+    - predicting ABOVE GT is heavily penalized
+    - predicting BELOW GT is mildly penalized
 
-You may change aggressively if needed, including:
-
-- weights
-- feature contributions
-- thresholds
-- feature extraction logic
-- scoring logic
-- ranking logic
-- heuristic behavior
-- logic addition or logic replacement
+**Goal: maximize overall_score by improving candidate ranking.**
 
 ---
 
-## Input
+## Core Principle
 
-You will receive `debug.json` each iteration.
+You are not tuning parameters.
 
-It contains the information needed to reason about current failures, including:
+You are fixing a decision system.
 
-- overall_score
-- delta from previous iteration
-- failures
-- row features
-- sheet features
-- header_candidates
-- data_candidates
-- current_weights
-- predicted vs ground-truth comparisons
-- score breakdowns for failed cases
-
-Use this to understand why the current logic made the wrong decision.
+Do not assume current logic is correct.
 
 ---
 
-## Primary Rule
+## What you CAN do
 
-Do not make vague global tuning changes unless clearly justified.
+You may modify anything inside `config_auto_finder.py`:
 
-Each iteration:
+- change logic
+- tune weights
+- add/remove heuristics
+- rewrite ranking
+- replace assumptions
+- simplify logic
+- introduce new signals
 
-1. pick 1 or 2 failed cases
-2. compare the predicted candidate against the correct candidate
-3. identify why the wrong candidate won
-4. make the smallest strong change likely to flip at least one failed ranking
-5. preserve generalization across the rest of the dataset
-
-The goal is not to “smooth” the system.  
-The goal is to make the correct candidate beat the wrong candidate on real failures.
-
----
-
-## Allowed Changes
-
-You may:
-
-- adjust weights
-- add or remove feature contributions
-- change thresholds
-- alter penalties and bonuses
-- change how row features are derived
-- change how candidate scores are computed
-- change how rows are ranked
-- change selection logic if current logic is structurally wrong
-- add a new general-purpose feature if needed
-- replace flawed heuristics with better general heuristics
-
-You are not limited to small tuning edits.  
-If current logic is wrong, fix the logic.
+All changes must improve ranking behavior.
 
 ---
 
-## Forbidden Changes
+## What you MUST NOT do
 
-Do NOT:
-
-- hardcode file names
-- hardcode template-specific values
-- add rules tied to one workbook or sheet
-- create hacks that solve only one sample
-- use exact strings from one template as special-case triggers
-- break the output contract
-- remove core detection functionality
-
-Do not overfit.  
-Do not memorize the dataset.
+- do not modify other files
+- do not add irrelevant code
+- do not make cosmetic changes
+- do not add complexity without benefit
+- do not hardcode for specific examples
 
 ---
 
-## How to Reason
+## Hypothesis-driven optimization
 
-For each failure you target:
+Each iteration MUST follow this structure:
 
-### 1. Compare prediction vs ground truth
-Identify:
+### 1. Choose ONE hypothesis
 
-- predicted sheet / row
-- correct sheet / row
-- predicted score
-- correct score
-- score gap
+A hypothesis is a short explanation of failure.
 
-### 2. Compare why wrong candidate won
-Ask:
+Examples:
+- `early_row_bias`
+- `dense_row_overweight`
+- `blank_row_misclassification`
+- `weak_table_boundary`
+- `header_numeric_bias`
+- `fixed_offset_bias`
 
-- which feature was over-rewarded?
-- which penalty was too weak?
-- which useful signal was ignored?
-- is feature extraction missing an important signal?
-- is ranking logic fundamentally wrong for this case?
-
-### 3. Choose the intervention
-Prefer this order:
-
-1. fix a clearly wrong contribution
-2. add a missing general feature contribution
-3. fix a bad threshold
-4. change feature extraction
-5. change scoring or ranking logic
-6. change core heuristic behavior
-
-### 4. Make the change strong enough to matter
-Avoid tiny edits that are unlikely to change any ranking.
-
-A change is useful only if it is likely to alter at least one failed decision.
+Rules:
+- Use 1–3 words
+- Only ONE hypothesis per iteration
+- All changes must directly test this hypothesis
 
 ---
 
-## Candidate-Flip Focus
+### 2. Analyze failures
 
-Think like this:
+You will be given failed examples.
 
-- “Predicted row X beat correct row Y because component A contributed too much.”
-- “Correct row Y had useful signal B that is underweighted.”
-- “I will reduce A or increase B enough to make Y competitive.”
+For each:
 
-Do not make edits that sound reasonable but are unlikely to change candidate ordering.
+- identify which candidate won
+- identify which should have won
+- identify WHY the wrong candidate outranked the correct one
 
-Repeated tiny no-op weight tweaks are bad optimization behavior.
-
----
-
-## When to Change Core Logic
-
-You are allowed to change core logic when:
-
-- feature weights alone are insufficient
-- ranking behavior is structurally biased
-- feature computation is missing an important general signal
-- candidate selection depends on a flawed assumption
-- repeated small adjustments do not move failed cases
-
-Aggressive changes are allowed.  
-Overfitted changes are not.
+Focus on ranking mechanism, not surface traits.
 
 ---
 
-## Overfitting Control
+### 3. Identify mechanism
 
-Dataset is small, so overfitting risk is high.
+Classify the issue:
 
-Do NOT:
+- wrong sheet selection
+- wrong header ranking
+- wrong data-row ranking
+- bias toward early rows
+- bias toward filled rows
+- bias toward sparse rows
+- bias toward long-text/title rows
+- weak boundary detection
+- weak block-start detection
 
-- optimize only the single lowest-scoring case
-- rely on exact tokens from one workbook
-- create narrow rules that only match one pattern
+Do NOT assume all failures share the same cause.
+
+---
+
+### 4. Decide change type
+
+Choose ONE:
+
+- weight/threshold tuning (only if clearly sufficient)
+- logic correction (bias fix, rule removal)
+- structural improvement (new signal, new ranking logic)
+
+If recent attempts failed with similar tuning → DO NOT repeat → choose structural change.
+
+---
+
+### 5. Make 1–2 focused changes
+
+Good changes:
+
+- flip a wrong bias
+- remove misleading signal
+- introduce missing structural cue
+- improve relative ranking
+- simplify conflicting logic
+
+Bad changes:
+
+- random tweaks
+- many simultaneous edits
+- weak changes unlikely to affect ranking
+- patching symptoms without fixing cause
+
+---
+
+## Learning from past failures
+
+You will be given recent failed attempts.
+
+You MUST:
+
+- extract their hypotheses
+- detect repetition
+- avoid repeating the same idea
+
+Important rules:
+
+- changing a threshold is NOT a new idea
+- making a penalty stronger is NOT a new idea
+- rephrasing logic is NOT a new idea
+
+If a direction failed, abandon it.
+
+---
+
+## Anti-repetition rules
+
+Do NOT repeat:
+
+- long-text penalty tuning
+- blank-row suppression tweaks
+- early-row bias nudging
+- small weight adjustments
+
+If these appeared in recent failures, choose a DIFFERENT hypothesis.
+
+---
+
+## Ranking-first mindset
+
+Always think in pairwise comparisons:
+
+- why did wrong candidate beat correct one?
+- which signals caused that?
+- what change would flip that ordering?
+
+Your job is to flip incorrect rankings.
+
+---
+
+## Plateau handling
+
+If improvements stall:
+
+- stop tuning weights
+- stop refining failed ideas
+- question assumptions
+- introduce new signals or logic
+
+Plateau means current abstraction is limiting performance.
+
+Change the abstraction.
+
+---
+
+## Sheet/header/data dependency
+
+Respect structure:
+
+- wrong sheet → everything fails
+- row logic only matters within correct sheet
+- do not treat row indices globally
+- do not optimize row logic ignoring sheet selection
+
+---
+
+## Simplicity rule
 
 Prefer:
 
-- structural signals
-- row-shape signals
-- feature distributions
-- generalized token categories like id / name / date / code
-- ranking logic that can transfer to unseen templates
+- fewer heuristics
+- cleaner logic
+- interpretable ranking
+- fewer special cases
 
-Before changing logic, ask:
+Reject:
 
-- would this still make sense on a different workbook with similar structure?
-- is this a pattern or just a memorized example?
+- complex hacks for tiny gains
 
 ---
 
-## Iteration Strategy
+## Decision rule
 
-Each iteration should make 1 or 2 focused changes.
+Keep a change only if:
 
-Good iteration behavior:
+- it improves score
+- or simplifies logic without hurting score
 
-- target a real failure
-- compare predicted vs correct candidate
-- make one meaningful fix
-- avoid touching many unrelated areas
+Reject if:
 
-If previous iterations made no improvement:
-
-- do not repeat the same tiny tweak
-- review the last 2-3 failed Pi outputs
-- if your planned change is similar to those failed attempts, do not repeat it
-- try a different approach
-- switch strategy
-- consider stronger contribution changes
-- consider threshold changes
-- consider feature extraction changes
-- consider logic changes
-
-If multiple recent attempts fail with similar reasoning:
-
-- do NOT just tweak weights
-- identify the shared assumption behind those attempts
-- ask: what belief about the data caused these changes?
-- ask: is that belief incorrect?
-- if a pattern repeatedly fails (for example, penalizing empty rows), test the opposite hypothesis
-
-You are allowed to reverse assumptions, not just adjust parameters.
-
-If the system is stuck, break the tie with a meaningful change.
+- no meaningful ranking change
+- overfits to few examples
+- increases complexity without benefit
 
 ---
 
-## Editing Style
+## Output requirements
 
-Good edits:
+Return:
 
-- localized
-- high-impact
-- logically justified
-- likely to flip a failed decision
-- generalizable
-
-Bad edits:
-
-- cosmetic rewrites
-- broad refactors with unclear effect
-- tiny changes with no likely ranking impact
-- repeated edits of the same kind after no improvement
-- scattered unrelated modifications
-
----
-
-## Success Criteria
-
-A good change should do at least one of these:
-
-- increase overall_score
-- reduce number of failures
-- shrink the score gap between wrong and correct candidates
-- improve separation in the right direction for real failed cases
-
----
-
-## Output
-
-Directly modify `config_auto_finder.py`.
-
-Do not output tool calls.
-
-Return only strict JSON in this format:
-
+```json
 {
-  "changed": true,
+  "changed": true|false,
+  "hypothesis": "short_name",
+  "change_type": "tuning|logic|structural",
   "summary": "what changed",
-  "why": "one line reason"
+  "why": "why this fixes ranking"
 }
-
-If no useful change is found, return:
-
-{
-  "changed": false,
-  "summary": "no change made",
-  "why": "one line reason"
-}
-
-No markdown.  
-No extra commentary.
-
----
-
-## Final Principle
-
-You are not just tuning weights.
-
-You are improving a feature-based ranking system.
-
-Your job is to identify why the wrong candidate wins, then change the logic strongly enough to let the correct candidate win, while keeping the rule general enough to transfer across the dataset.
