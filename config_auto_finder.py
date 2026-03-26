@@ -105,8 +105,9 @@ WEIGHTS = {
         "short_text_ratio": 0.01,
         "unique_value_ratio": 0.04,
         "style_ratio": 0.00,
-        "followed_by_tabular": 0.02,
-        "early_row_bias": 0.38,
+        "followed_by_tabular": 0.12,
+        "dense_context": 0.15,
+        "early_row_bias": 0.32,
         "has_id_like_token": 0.00,
         "has_name_like_token": 0.00,
         "has_date_like_token": 0.00,
@@ -120,11 +121,12 @@ WEIGHTS = {
         "overlap_with_header": 0.04,
         "numeric_ratio": 0.16,
         "value_mix": 0.02,
-        "early_after_header": 0.26,
-        "offset_preference": 0.24,
+        "early_after_header": 0.22,
+        "offset_preference": 0.18,
         "unstyled_ratio": 0.00,
         "unique_value_ratio": 0.02,
         "first_non_empty_after_header": 0.00,
+        "drop_from_previous": 0.14,
         "sparse_input": 0.24,
         "transition_from_dense": 0.10,
         "dense_block_start": 0.18,
@@ -453,15 +455,23 @@ def detect_header_row(
     for row in rows:
         non_empty_count = row["non_empty_count"]
         prev_row = rows_by_index.get(row["row_index"] - 1)
+        next_row = rows_by_index.get(row["row_index"] + 1)
+        prev_three = [rows_by_index.get(row["row_index"] - i) for i in range(1, 4)]
+        dense_run_before = sum(1 for prev in prev_three if prev and prev["non_empty_count"] >= 3) / len(prev_three)
         prev_avg_len = prev_row["average_text_length"] if prev_row else 0.0
         length_step_up = clamp((row["average_text_length"] - prev_avg_len) / 8.0)
-        # Prefer rows that look more like a real header boundary than a title stub.
+        next_drop = 0.0
+        if next_row and non_empty_count:
+            next_drop = clamp((non_empty_count - next_row["non_empty_count"]) / float(non_empty_count))
+        # Prefer rows that sit at the end of a header-like block instead of a title stub.
         features = {
             "non_empty_norm": clamp(non_empty_count / 10.0),
             "early_row_bias": clamp(1.0 - ((row["row_index"] - 1) / max(1.0, scanned_rows - 1.0))),
             "numeric_ratio": clamp(1.0 - row["numeric_ratio"]),
             "sparse_penalty": clamp((2.0 - non_empty_count) / 2.0),
             "length_step_up": length_step_up,
+            "followed_by_tabular": next_drop,
+            "dense_context": dense_run_before,
         }
         score_info = _score_additive(features, weights)
         candidates.append(
@@ -519,11 +529,13 @@ def detect_data_row(
         overlap_with_header = len(row_columns & header_columns) / header_col_count
         style_ratio = clamp(row["styled_count"] / max(1.0, float(non_empty_count)))
         distance = row["row_index"] - header_row
-        prev_non_empty = rows_by_index.get(row["row_index"] - 1, {}).get("non_empty_count", 0)
+        prev_row = rows_by_index.get(row["row_index"] - 1)
+        prev_non_empty = prev_row.get("non_empty_count", 0) if prev_row else 0
         prev_three = [rows_by_index.get(row["row_index"] - i) for i in range(1, 4)]
         dense_run_before = sum(1 for prev in prev_three if prev and prev["non_empty_count"] >= 3) / len(prev_three)
         dense_block_start = float(non_empty_count <= 2 and dense_run_before >= 0.67)
-        # Prefer the first sparse row after a genuine dense block, not merely the earliest row after the header.
+        density_drop_from_prev = clamp((prev_non_empty - non_empty_count) / max(1.0, float(prev_non_empty))) if prev_non_empty else 0.0
+        # Prefer rows that follow a real density drop instead of merely the earliest row after the header.
         features = {
             "overlap_with_header": clamp(overlap_with_header),
             "numeric_ratio": row["numeric_ratio"],
@@ -539,6 +551,7 @@ def detect_data_row(
             "unique_value_ratio": row["unique_value_ratio"],
             "value_mix": clamp(1.0 - row["short_text_ratio"] * row["string_ratio"]),
             "first_non_empty_after_header": float(row["row_index"] == first_non_empty_after_header),
+            "drop_from_previous": density_drop_from_prev,
         }
         score_info = _score_additive(features, weights)
         scored_rows.append(
