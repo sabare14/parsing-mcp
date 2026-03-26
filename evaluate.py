@@ -13,6 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 EXPECTED_KEYS = ("file", "sheet", "header_row", "data_row")
+HEADER_TAU = 2.5
+DATA_TAU_DOWN = 4.0
+DATA_TAU_UP = 1.5
 
 
 def normalize_sample(sample: dict[str, Any]) -> dict[str, Any]:
@@ -71,15 +74,30 @@ def run_detection(file_path: str | Path) -> tuple[dict[str, Any], dict[str, Any]
 
 
 def score_prediction(pred: dict[str, Any], gt: dict[str, Any]) -> tuple[dict[str, bool], dict[str, float]]:
-    sheet_score = 1.0 if pred["sheet"] == gt["sheet"] else 0.0
-    header_score = math.exp(-abs(pred["header_row"] - gt["header_row"]))
-    data_score = math.exp(-abs(pred["data_row"] - gt["data_row"]))
-    final_score = 0.4 * sheet_score + 0.3 * header_score + 0.3 * data_score
+    sheet_correct = pred["sheet"] == gt["sheet"]
+    sheet_score = 1.0 if sheet_correct else 0.0
+    if not sheet_correct:
+        header_score = 0.0
+        data_score = 0.0
+        final_score = 0.0
+    else:
+        header_error = abs(int(pred["header_row"]) - int(gt["header_row"]))
+        header_score = math.exp(-(header_error / HEADER_TAU))
+
+        delta = int(pred["data_row"]) - int(gt["data_row"])
+        if delta == 0:
+            data_score = 1.0
+        elif delta > 0:
+            data_score = math.exp(-(delta / DATA_TAU_DOWN))
+        else:
+            data_score = math.exp(delta / DATA_TAU_UP)
+
+        final_score = 0.4 * header_score + 0.6 * data_score
     return (
         {
-            "sheet": bool(sheet_score),
-            "header": pred["header_row"] == gt["header_row"],
-            "data": pred["data_row"] == gt["data_row"],
+            "sheet": sheet_correct,
+            "header": sheet_correct and (pred["header_row"] == gt["header_row"]),
+            "data": sheet_correct and (pred["data_row"] == gt["data_row"]),
         },
         {
             "sheet": round(sheet_score, 6),

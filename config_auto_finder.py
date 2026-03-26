@@ -86,49 +86,49 @@ TOKEN_SIGNALS = {
 }
 WEIGHTS = {
     "sheet": {
-        "column_breadth": 0.32,
-        "density": 0.04,
-        "text_balance": 0.10,
-        "style_support": 0.05,
-        "name_positive": 0.10,
-        "template_shape": 0.16,
-        "header_focus": 0.05,
-        "wide_sparse_ratio": 0.08,
-        "instruction_signal": -0.22,
-        "lookup_signal": -0.24,
-        "dense_penalty": -0.06,
-        "name_negative": -0.45,
+        "column_breadth": 0.10,
+        "density": 0.20,
+        "text_balance": 0.03,
+        "style_support": 0.02,
+        "name_positive": 0.02,
+        "template_shape": 0.04,
+        "header_focus": 0.01,
+        "wide_sparse_ratio": 0.18,
+        "instruction_signal": 0.22,
+        "lookup_signal": 0.24,
+        "dense_penalty": 0.08,
+        "name_negative": -0.08,
     },
     "header": {
-        "non_empty_norm": 0.22,
-        "string_ratio": 0.18,
-        "short_text_ratio": 0.12,
-        "unique_value_ratio": 0.08,
-        "style_ratio": 0.08,
-        "followed_by_tabular": 0.12,
-        "early_row_bias": 0.02,
-        "has_id_like_token": 0.05,
-        "has_name_like_token": 0.07,
-        "has_date_like_token": 0.05,
-        "has_code_like_token": 0.05,
-        "numeric_ratio": -0.16,
-        "long_text_ratio": -0.10,
-        "sparse_penalty": -0.12,
+        "non_empty_norm": 0.14,
+        "string_ratio": 0.02,
+        "short_text_ratio": 0.01,
+        "unique_value_ratio": 0.04,
+        "style_ratio": 0.00,
+        "followed_by_tabular": 0.02,
+        "early_row_bias": 0.38,
+        "has_id_like_token": 0.00,
+        "has_name_like_token": 0.00,
+        "has_date_like_token": 0.00,
+        "has_code_like_token": 0.00,
+        "numeric_ratio": 0.22,
+        "long_text_ratio": 0.05,
+        "sparse_penalty": 0.08,
     },
     "data": {
-        "overlap_with_header": 0.20,
-        "numeric_ratio": 0.08,
-        "value_mix": 0.10,
-        "early_after_header": 0.12,
-        "offset_preference": 0.12,
-        "unstyled_ratio": 0.05,
-        "unique_value_ratio": 0.06,
-        "first_non_empty_after_header": 0.14,
-        "sparse_input": 0.06,
-        "transition_from_dense": 0.12,
-        "header_like_text": -0.22,
-        "long_note_penalty": -0.14,
-        "dense_row_penalty": -0.06,
+        "overlap_with_header": 0.04,
+        "numeric_ratio": 0.16,
+        "value_mix": 0.02,
+        "early_after_header": 0.26,
+        "offset_preference": 0.24,
+        "unstyled_ratio": 0.00,
+        "unique_value_ratio": 0.02,
+        "first_non_empty_after_header": 0.04,
+        "sparse_input": 0.24,
+        "transition_from_dense": 0.10,
+        "header_like_text": 0.20,
+        "long_note_penalty": 0.12,
+        "dense_row_penalty": 0.06,
     },
     "selection": {
         "sheet": 0.80,
@@ -447,27 +447,13 @@ def detect_header_row(
     rows = feature_dump["rows"]
     scanned_rows = max(1, len(rows))
     candidates: list[dict[str, Any]] = []
-    for idx, row in enumerate(rows):
-        next_rows = rows[idx + 1 : idx + 3]
-        next_avg_non_empty = (
-            sum(next_row["non_empty_count"] for next_row in next_rows) / max(1, len(next_rows))
-        )
+    for row in rows:
         non_empty_count = row["non_empty_count"]
-        style_ratio = clamp(row["styled_count"] / max(1.0, float(non_empty_count)))
+        # Intentionally naive starter: trust early rows and simple fill counts.
         features = {
             "non_empty_norm": clamp(non_empty_count / 10.0),
-            "string_ratio": row["string_ratio"],
-            "short_text_ratio": row["short_text_ratio"],
-            "unique_value_ratio": row["unique_value_ratio"],
-            "style_ratio": style_ratio,
-            "followed_by_tabular": clamp(next_avg_non_empty / max(3.0, float(non_empty_count))),
             "early_row_bias": clamp(1.0 - ((row["row_index"] - 1) / max(1.0, scanned_rows - 1.0))),
-            "has_id_like_token": float(row["has_id_like_token"]),
-            "has_name_like_token": float(row["has_name_like_token"]),
-            "has_date_like_token": float(row["has_date_like_token"]),
-            "has_code_like_token": float(row["has_code_like_token"]),
             "numeric_ratio": row["numeric_ratio"],
-            "long_text_ratio": row["long_text_ratio"],
             "sparse_penalty": clamp((2.0 - non_empty_count) / 2.0),
         }
         score_info = _score_additive(features, weights)
@@ -527,20 +513,21 @@ def detect_data_row(
         style_ratio = clamp(row["styled_count"] / max(1.0, float(non_empty_count)))
         distance = row["row_index"] - header_row
         prev_non_empty = rows_by_index.get(row["row_index"] - 1, {}).get("non_empty_count", 0)
+        # Intentionally naive starter: prefer rows near header with little structure.
         features = {
             "overlap_with_header": clamp(overlap_with_header),
             "numeric_ratio": row["numeric_ratio"],
-            "value_mix": clamp(1.0 - row["short_text_ratio"] * row["string_ratio"]),
             "early_after_header": clamp(1.0 - ((distance - 1) / span)),
             "offset_preference": clamp(1.0 - abs(distance - 2.5) / 3.5),
-            "unstyled_ratio": clamp(1.0 - style_ratio),
-            "unique_value_ratio": row["unique_value_ratio"],
-            "first_non_empty_after_header": float(row["row_index"] == first_non_empty_after_header),
             "sparse_input": float(non_empty_count <= 1),
             "transition_from_dense": float(prev_non_empty >= 3 and non_empty_count <= 1),
             "header_like_text": clamp(row["string_ratio"] * row["short_text_ratio"]),
             "long_note_penalty": clamp(row["long_text_ratio"] * row["string_ratio"]),
             "dense_row_penalty": clamp((non_empty_count - 8.0) / 8.0),
+            "unstyled_ratio": clamp(1.0 - style_ratio),
+            "unique_value_ratio": row["unique_value_ratio"],
+            "value_mix": clamp(1.0 - row["short_text_ratio"] * row["string_ratio"]),
+            "first_non_empty_after_header": float(row["row_index"] == first_non_empty_after_header),
         }
         score_info = _score_additive(features, weights)
         scored_rows.append(
