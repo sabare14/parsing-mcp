@@ -111,8 +111,9 @@ WEIGHTS = {
         "has_name_like_token": 0.00,
         "has_date_like_token": 0.00,
         "has_code_like_token": 0.00,
-        "numeric_ratio": 0.22,
+        "numeric_ratio": -0.22,
         "long_text_ratio": 0.05,
+        "length_step_up": 0.18,
         "sparse_penalty": 0.08,
     },
     "data": {
@@ -123,9 +124,10 @@ WEIGHTS = {
         "offset_preference": 0.24,
         "unstyled_ratio": 0.00,
         "unique_value_ratio": 0.02,
-        "first_non_empty_after_header": 0.04,
+        "first_non_empty_after_header": 0.00,
         "sparse_input": 0.24,
         "transition_from_dense": 0.10,
+        "dense_block_start": 0.18,
         "header_like_text": 0.20,
         "long_note_penalty": 0.12,
         "dense_row_penalty": 0.06,
@@ -446,15 +448,20 @@ def detect_header_row(
 ) -> dict[str, Any]:
     rows = feature_dump["rows"]
     scanned_rows = max(1, len(rows))
+    rows_by_index = {row["row_index"]: row for row in rows}
     candidates: list[dict[str, Any]] = []
     for row in rows:
         non_empty_count = row["non_empty_count"]
-        # Intentionally naive starter: trust early rows and simple fill counts.
+        prev_row = rows_by_index.get(row["row_index"] - 1)
+        prev_avg_len = prev_row["average_text_length"] if prev_row else 0.0
+        length_step_up = clamp((row["average_text_length"] - prev_avg_len) / 8.0)
+        # Prefer rows that look more like a real header boundary than a title stub.
         features = {
             "non_empty_norm": clamp(non_empty_count / 10.0),
             "early_row_bias": clamp(1.0 - ((row["row_index"] - 1) / max(1.0, scanned_rows - 1.0))),
-            "numeric_ratio": row["numeric_ratio"],
+            "numeric_ratio": clamp(1.0 - row["numeric_ratio"]),
             "sparse_penalty": clamp((2.0 - non_empty_count) / 2.0),
+            "length_step_up": length_step_up,
         }
         score_info = _score_additive(features, weights)
         candidates.append(
@@ -513,7 +520,10 @@ def detect_data_row(
         style_ratio = clamp(row["styled_count"] / max(1.0, float(non_empty_count)))
         distance = row["row_index"] - header_row
         prev_non_empty = rows_by_index.get(row["row_index"] - 1, {}).get("non_empty_count", 0)
-        # Intentionally naive starter: prefer rows near header with little structure.
+        prev_three = [rows_by_index.get(row["row_index"] - i) for i in range(1, 4)]
+        dense_run_before = sum(1 for prev in prev_three if prev and prev["non_empty_count"] >= 3) / len(prev_three)
+        dense_block_start = float(non_empty_count <= 2 and dense_run_before >= 0.67)
+        # Prefer the first sparse row after a genuine dense block, not merely the earliest row after the header.
         features = {
             "overlap_with_header": clamp(overlap_with_header),
             "numeric_ratio": row["numeric_ratio"],
@@ -521,6 +531,7 @@ def detect_data_row(
             "offset_preference": clamp(1.0 - abs(distance - 2.5) / 3.5),
             "sparse_input": float(non_empty_count <= 1),
             "transition_from_dense": float(prev_non_empty >= 3 and non_empty_count <= 1),
+            "dense_block_start": dense_block_start,
             "header_like_text": clamp(row["string_ratio"] * row["short_text_ratio"]),
             "long_note_penalty": clamp(row["long_text_ratio"] * row["string_ratio"]),
             "dense_row_penalty": clamp((non_empty_count - 8.0) / 8.0),
