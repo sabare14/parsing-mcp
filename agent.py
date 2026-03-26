@@ -119,7 +119,7 @@ def parse_overall_score(results):
 
 
 def git_commit(iteration):
-    add_result = subprocess.run(["git", "add", "."], text=True, capture_output=True)
+    add_result = subprocess.run(["git", "add", "config_auto_finder.py"], text=True, capture_output=True)
     if add_result.returncode != 0:
         raise RuntimeError(add_result.stderr.strip() or add_result.stdout.strip() or "git add failed")
     commit_result = subprocess.run(
@@ -216,7 +216,7 @@ def main():
             _, debug = load_history_iteration(best_iter)
             recent_failed_pi_outputs = load_recent_failed_pi_outputs(limit=3)
             failures = debug.get("failures", [])
-            current_weights = debug.get("current_weights", {})
+            logging.info(recent_failed_pi_outputs)
             logging.info(
                 f"Best so far: score={best_score:.6f} (iter={best_iter}), failures={len(failures)}"
             )
@@ -246,7 +246,6 @@ def main():
                 f"recent_failed_pi_outputs:\n{json.dumps(recent_failed_pi_outputs, indent=2, sort_keys=True)}\n\n"
                 f"overall_score={best_score}\n"
                 f"failures={len(failures)}\n"
-                f"current_weights={json.dumps(current_weights, sort_keys=True)}\n"
             )
 
 

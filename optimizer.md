@@ -216,6 +216,16 @@ If previous iterations made no improvement:
 - consider feature extraction changes
 - consider logic changes
 
+If multiple recent attempts fail with similar reasoning:
+
+- do NOT just tweak weights
+- identify the shared assumption behind those attempts
+- ask: what belief about the data caused these changes?
+- ask: is that belief incorrect?
+- if a pattern repeatedly fails (for example, penalizing empty rows), test the opposite hypothesis
+
+You are allowed to reverse assumptions, not just adjust parameters.
+
 If the system is stuck, break the tie with a meaningful change.
 
 ---
