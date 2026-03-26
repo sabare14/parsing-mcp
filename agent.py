@@ -60,10 +60,10 @@ def call_pi(prompt_text):
             input=prompt_text,
             text=True,
             capture_output=True,
-            timeout=240,
+            timeout=360,
         )
     except subprocess.TimeoutExpired as exc:
-        raise TimeoutError("Pi timeout after 240 seconds") from exc
+        raise TimeoutError("Pi timeout after 360 seconds") from exc
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "pi call failed")
     return result.stdout.strip()
@@ -218,7 +218,6 @@ def main():
             _, debug = load_history_iteration(best_iter)
             recent_failed_pi_outputs = load_recent_failed_pi_outputs(limit=3)
             failures = debug.get("failures", [])
-            logging.info(recent_failed_pi_outputs)
             logging.info(
                 f"Best so far: score={best_score:.6f} (iter={best_iter}), failures={len(failures)}"
             )

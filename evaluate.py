@@ -237,6 +237,21 @@ def _score_gap(predicted_score: Any, ground_truth_score: Any) -> float | None:
     return round(float(predicted_score) - float(ground_truth_score), 6)
 
 
+def _component_diff(
+    predicted_components: dict[str, Any] | None,
+    ground_truth_components: dict[str, Any] | None,
+) -> dict[str, float]:
+    predicted = predicted_components if isinstance(predicted_components, dict) else {}
+    ground_truth = ground_truth_components if isinstance(ground_truth_components, dict) else {}
+    all_keys = sorted(set(predicted) | set(ground_truth))
+    diff: dict[str, float] = {}
+    for key in all_keys:
+        pred_value = float(predicted.get(key, 0.0) or 0.0)
+        gt_value = float(ground_truth.get(key, 0.0) or 0.0)
+        diff[key] = round(pred_value - gt_value, 6)
+    return diff
+
+
 def evaluate(ground_truth_json: str | Path, excel_dir: str | Path) -> tuple[dict[str, Any], dict[str, Any]]:
     excel_dir = Path(excel_dir)
     samples = load_ground_truth(ground_truth_json)
@@ -366,6 +381,14 @@ def evaluate(ground_truth_json: str | Path, excel_dir: str | Path) -> tuple[dict
             predicted_data_score = data_predicted_row.get("score")
             correct_data_score = data_correct_row.get("score")
             data_score_gap = _score_gap(predicted_data_score, correct_data_score)
+            header_component_diff = _component_diff(
+                predicted_components=header_predicted_row.get("components"),
+                ground_truth_components=header_correct_row.get("components"),
+            )
+            data_component_diff = _component_diff(
+                predicted_components=data_predicted_row.get("components"),
+                ground_truth_components=data_correct_row.get("components"),
+            )
 
             scanned_rows = int(sheet.get("scanned_rows", len(row_features)))
             max_row = int(
@@ -396,12 +419,14 @@ def evaluate(ground_truth_json: str | Path, excel_dir: str | Path) -> tuple[dict
                         "predicted": header_predicted_row,
                         "ground_truth": header_correct_row,
                         "score_gap": header_score_gap,
+                        "component_diff": header_component_diff,
                     },
                     "data_comparison": {
                         "applicable": bool(correct_data_row > predicted_header_row),
                         "predicted": data_predicted_row,
                         "ground_truth": data_correct_row,
                         "score_gap": data_score_gap,
+                        "component_diff": data_component_diff,
                     },
                     "header_miss": {
                         "correct_row": correct_header_row,
