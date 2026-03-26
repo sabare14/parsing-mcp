@@ -124,6 +124,7 @@ WEIGHTS = {
         "first_non_empty_after_header": 0.14,
         "sparse_input": 0.06,
         "transition_from_dense": 0.12,
+        "row_shrink_from_previous": 0.34,
         "header_like_text": -0.22,
         "long_note_penalty": -0.14,
         "dense_row_penalty": -0.06,
@@ -525,6 +526,11 @@ def detect_data_row(
         style_ratio = clamp(row["styled_count"] / max(1.0, float(non_empty_count)))
         distance = row["row_index"] - header_row
         prev_non_empty = rows_by_index.get(row["row_index"] - 1, {}).get("non_empty_count", 0)
+        row_shrink_from_previous = (
+            0.0
+            if non_empty_count <= 0 or prev_non_empty <= 0 or non_empty_count >= prev_non_empty
+            else clamp((prev_non_empty - non_empty_count) / max(1.0, float(prev_non_empty)))
+        )
         features = {
             "overlap_with_header": clamp(overlap_with_header),
             "numeric_ratio": row["numeric_ratio"],
@@ -536,6 +542,7 @@ def detect_data_row(
             "first_non_empty_after_header": float(row["row_index"] == first_non_empty_after_header),
             "sparse_input": float(non_empty_count == 1),
             "transition_from_dense": float(prev_non_empty >= 3 and non_empty_count <= 1),
+            "row_shrink_from_previous": row_shrink_from_previous,
             "header_like_text": clamp(row["string_ratio"] * row["short_text_ratio"]),
             "long_note_penalty": clamp(row["long_text_ratio"] * row["string_ratio"]),
             "dense_row_penalty": clamp((non_empty_count - 8.0) / 8.0),
