@@ -9,6 +9,7 @@ from pathlib import Path
 HISTORY_DIR = Path("history")
 CONFIG_FILE = Path("config_auto_finder.py")
 OPTIMIZER_FILE = Path("optimizer.md")
+DOMAIN_KNOWLEDGE_FILE = Path("domain_knowledge.md")
 AGENT_HISTORY_FILE = Path("agent_history.jsonl")
 MAX_ITERS = 100
 MAX_CONFIG_CHANGED_LINES = 120
@@ -192,6 +193,7 @@ def verify_best_state(best_iter, best_config_text):
 
 def main():
     optimizer_text = OPTIMIZER_FILE.read_text(encoding="utf-8")
+    domain_knowledge_text = DOMAIN_KNOWLEDGE_FILE.read_text(encoding="utf-8")
     logging.info("Running initial evaluation to establish best state...")
     initial_iter, initial_results, _ = run_evaluation()
     best_score = parse_overall_score(initial_results)
@@ -242,6 +244,7 @@ def main():
                 "No markdown. No extra text.\n\n"
 
                 f"optimizer.md:\n{optimizer_text}\n\n"
+                f"domain_knowledge.md:\n{domain_knowledge_text}\n\n"
                 f"debug.json:\n{json.dumps(debug, indent=2, sort_keys=True)}\n\n"
                 f"recent_failed_pi_outputs:\n{json.dumps(recent_failed_pi_outputs, indent=2, sort_keys=True)}\n\n"
                 f"overall_score={best_score}\n"
