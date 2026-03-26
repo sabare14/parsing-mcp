@@ -207,6 +207,9 @@ Good iteration behavior:
 If previous iterations made no improvement:
 
 - do not repeat the same tiny tweak
+- review the last 2-3 failed Pi outputs
+- if your planned change is similar to those failed attempts, do not repeat it
+- try a different approach
 - switch strategy
 - consider stronger contribution changes
 - consider threshold changes

@@ -142,6 +142,36 @@ def append_history(record):
         f.write(json.dumps(record, sort_keys=True) + "\n")
 
 
+def load_recent_failed_pi_outputs(limit=3):
+    if not AGENT_HISTORY_FILE.exists():
+        return []
+    records = []
+    for line in AGENT_HISTORY_FILE.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            records.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    recent = []
+    for record in reversed(records):
+        if record.get("status") == "kept":
+            continue
+        pi_output = record.get("pi_output")
+        if not pi_output:
+            continue
+        recent.append(
+            {
+                "iteration": record.get("iteration"),
+                "status": record.get("status"),
+                "pi_output": pi_output,
+            }
+        )
+        if len(recent) >= limit:
+            break
+    return list(reversed(recent))
+
+
 def classify_exception(exc):
     if isinstance(exc, TimeoutError):
         return "timeout"
@@ -184,6 +214,7 @@ def main():
             prev_score = best_score
             before_iter = best_iter
             _, debug = load_history_iteration(best_iter)
+            recent_failed_pi_outputs = load_recent_failed_pi_outputs(limit=3)
             failures = debug.get("failures", [])
             current_weights = debug.get("current_weights", {})
             logging.info(
@@ -201,6 +232,10 @@ def main():
                 "Make 1-2 focused changes that are likely to flip at least one failed ranking.\n"
                 "Avoid small changes that do not affect candidate ordering.\n\n"
 
+                "Last 2-3 Pi outputs (recent failed attempts) are included below.\n"
+                "If similar logic appears in those past attempts, do NOT repeat it.\n"
+                "Try a different approach.\n\n"
+
                 "Do not plan extensively. Make the change immediately after brief reasoning. Keep reasoning short. Do not over-analyze.\n\n"
                 "Return strict JSON only:\n"
                 '{"changed": true|false, "summary": "what changed", "why": "one line"}\n'
@@ -208,6 +243,7 @@ def main():
 
                 f"optimizer.md:\n{optimizer_text}\n\n"
                 f"debug.json:\n{json.dumps(debug, indent=2, sort_keys=True)}\n\n"
+                f"recent_failed_pi_outputs:\n{json.dumps(recent_failed_pi_outputs, indent=2, sort_keys=True)}\n\n"
                 f"overall_score={best_score}\n"
                 f"failures={len(failures)}\n"
                 f"current_weights={json.dumps(current_weights, sort_keys=True)}\n"
