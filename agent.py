@@ -233,6 +233,17 @@ def main():
                 "Focus on 2-3 failed cases only.\n"
                 "Focus on WHY the incorrect candidate outranked the correct one.\n\n"
 
+                "You must follow hypothesis-driven optimization.\n"
+                "Choose ONE hypothesis for this iteration (1-3 words).\n"
+                "Do not mix multiple ideas.\n\n"
+
+                "You are given recent failed attempts.\n"
+                "Identify repeated hypotheses or similar ideas.\n"
+                "Do NOT try the same direction again.\n"
+                "Changing a threshold or making a penalty stronger is NOT a new idea.\n\n"
+
+                "If recent attempts focused on the same issue, choose a DIFFERENT hypothesis.\n\n"
+
                 "Then make 1-2 HIGH IMPACT changes.\n"
                 "You are allowed to:\n"
                 "- change logic\n"
@@ -244,14 +255,20 @@ def main():
                 "If the system is plateauing, change the logic — not just weights.\n\n"
 
                 "Avoid changes that do not affect candidate ranking.\n"
-                "Avoid repeating ideas from recent failed attempts.\n"
-                "If something was already tried, do something different.\n\n"
+                "Keep the selected hypothesis explicit in output.\n\n"
 
                 "Keep reasoning SHORT.\n"
                 "Do not over-analyze. Act quickly.\n\n"
 
                 "Return strict JSON only:\n"
-                '{"changed": true|false, "summary": "what changed", "why": "one line"}\n'
+                """example : {
+                    changed: true,
+                    hypothesis: early_row_bias,
+                    for: header_row
+                    change_type: logic_update,
+                    summary: reduced early row bias and added boundary detection,
+                    why: early rows were consistently outranking true headers
+                    }\n"""
                 "No markdown. No extra text.\n\n"
 
                 f"optimizer.md:\n{optimizer_text}\n\n"
