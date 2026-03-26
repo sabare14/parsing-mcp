@@ -225,33 +225,44 @@ def main():
             llm_prompt = (
                 "You are improving config_auto_finder.py.\n"
                 "Edit ONLY config_auto_finder.py directly in the workspace.\n\n"
+
                 "Do not explore files.\n"
                 "Do not scan the repository.\n"
                 "Only modify config_auto_finder.py.\n\n"
 
                 "Focus on 2-3 failed cases only.\n"
-                "For each, explain why the predicted row beat the correct row, then fix it.\n"
-                "Make 1-2 focused changes that are likely to flip at least one failed ranking.\n"
-                "Avoid small changes that do not affect candidate ordering.\n\n"
+                "Focus on WHY the incorrect candidate outranked the correct one.\n\n"
 
-                "Last 2-3 Pi outputs (recent failed attempts) are included below.\n"
-                "If similar logic appears in those past attempts, do NOT repeat it.\n"
-                "Try a different approach.\n\n"
+                "Then make 1-2 HIGH IMPACT changes.\n"
+                "You are allowed to:\n"
+                "- change logic\n"
+                "- remove wrong assumptions\n"
+                "- add or modify heuristics\n"
+                "- adjust scoring behavior\n\n"
 
-                "Do not plan extensively. Make the change immediately after brief reasoning. Keep reasoning short. Do not over-analyze.\n\n"
+                "Do NOT restrict yourself to small tweaks if the issue is structural.\n"
+                "If the system is plateauing, change the logic — not just weights.\n\n"
+
+                "Avoid changes that do not affect candidate ranking.\n"
+                "Avoid repeating ideas from recent failed attempts.\n"
+                "If something was already tried, do something different.\n\n"
+
+                "Keep reasoning SHORT.\n"
+                "Do not over-analyze. Act quickly.\n\n"
+
                 "Return strict JSON only:\n"
                 '{"changed": true|false, "summary": "what changed", "why": "one line"}\n'
                 "No markdown. No extra text.\n\n"
 
                 f"optimizer.md:\n{optimizer_text}\n\n"
-                f"domain_knowledge.md:\n{domain_knowledge_text}\n\n"
+                # f"domain_knowledge.md:\n{domain_knowledge_text}\n\n"
+
                 f"debug.json:\n{json.dumps(debug, indent=2, sort_keys=True)}\n\n"
                 f"recent_failed_pi_outputs:\n{json.dumps(recent_failed_pi_outputs, indent=2, sort_keys=True)}\n\n"
+
                 f"overall_score={best_score}\n"
                 f"failures={len(failures)}\n"
             )
-
-
             before_text = CONFIG_FILE.read_text(encoding="utf-8")
             logging.info("Calling Pi for a candidate improvement...")
             pi_output = call_pi(llm_prompt)
